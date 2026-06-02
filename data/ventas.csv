@@ -1,0 +1,53 @@
+id,fecha,producto,categoria,vendedor,region,cantidad,precio_unitario,total
+1,2024-01-05,Laptop Pro,Tecnología,Ana García,Norte,3,1200,3600
+2,2024-01-08,Mouse Inalámbrico,Accesorios,Carlos López,Sur,15,25,375
+3,2024-01-10,Monitor 4K,Tecnología,Ana García,Norte,2,800,1600
+4,2024-01-12,Teclado Mecánico,Accesorios,María Torres,Centro,8,90,720
+5,2024-01-15,Laptop Pro,Tecnología,Carlos López,Sur,1,1200,1200
+6,2024-01-18,Smartwatch G5,Tecnología,Laura Fernández,Este,4,350,1400
+7,2024-01-20,SSD 1TB,Almacenamiento,Ricardo Méndez,Oeste,6,120,720
+8,2024-01-22,Webcam 4K,Accesorios,Sofía Ramírez,Norte,9,80,720
+9,2024-01-25,Memoria USB 64GB,Almacenamiento,Laura Fernández,Este,25,15,375
+10,2024-01-28,Monitor 4K,Tecnología,Ricardo Méndez,Oeste,1,800,800
+11,2024-02-03,Auriculares BT,Accesorios,Ana García,Norte,10,60,600
+12,2024-02-07,Tablet X,Tecnología,María Torres,Centro,5,450,2250
+13,2024-02-14,Mouse Inalámbrico,Accesorios,Carlos López,Sur,20,25,500
+14,2024-02-18,Monitor 4K,Tecnología,Ana García,Norte,3,800,2400
+15,2024-02-22,Laptop Pro,Tecnología,María Torres,Centro,2,1200,2400
+16,2024-02-24,Smartwatch G5,Tecnología,Sofía Ramírez,Norte,6,350,2100
+17,2024-02-26,SSD 1TB,Almacenamiento,Laura Fernández,Este,8,120,960
+18,2024-02-28,Webcam 4K,Accesorios,Ricardo Méndez,Oeste,12,80,960
+19,2024-03-01,Teclado Mecánico,Accesorios,Carlos López,Sur,12,90,1080
+20,2024-03-05,Tablet X,Tecnología,Ana García,Norte,4,450,1800
+21,2024-03-10,Auriculares BT,Accesorios,María Torres,Centro,7,60,420
+22,2024-03-15,Laptop Pro,Tecnología,Carlos López,Sur,2,1200,2400
+23,2024-03-20,Monitor 4K,Tecnología,María Torres,Centro,1,800,800
+24,2024-03-22,Memoria USB 64GB,Almacenamiento,Sofía Ramírez,Norte,30,15,450
+25,2024-03-25,Smartwatch G5,Tecnología,Ricardo Méndez,Oeste,5,350,1750
+26,2024-03-28,SSD 1TB,Almacenamiento,Ana García,Norte,7,120,840
+27,2024-04-01,Laptop Pro,Tecnología,Laura Fernández,Este,2,1200,2400
+28,2024-04-04,Mouse Inalámbrico,Accesorios,Ricardo Méndez,Oeste,18,25,450
+29,2024-04-08,Webcam 4K,Accesorios,María Torres,Centro,10,80,800
+30,2024-04-12,Teclado Mecánico,Accesorios,Sofía Ramírez,Norte,6,90,540
+31,2024-04-15,Monitor 4K,Tecnología,Carlos López,Sur,4,800,3200
+32,2024-04-18,Auriculares BT,Accesorios,Laura Fernández,Este,12,60,720
+33,2024-04-22,Tablet X,Tecnología,Ana García,Norte,3,450,1350
+34,2024-04-25,SSD 1TB,Almacenamiento,Ricardo Méndez,Oeste,10,120,1200
+35,2024-04-28,Memoria USB 64GB,Almacenamiento,Sofía Ramírez,Norte,20,15,300
+36,2024-05-02,Smartwatch G5,Tecnología,María Torres,Centro,7,350,2450
+37,2024-05-06,Laptop Pro,Tecnología,Ricardo Méndez,Oeste,3,1200,3600
+38,2024-05-10,Mouse Inalámbrico,Accesorios,Sofía Ramírez,Norte,25,25,625
+39,2024-05-14,Webcam 4K,Accesorios,Ana García,Norte,8,80,640
+40,2024-05-18,Teclado Mecánico,Accesorios,Carlos López,Sur,10,90,900
+41,2024-05-22,Monitor 4K,Tecnología,Laura Fernández,Este,2,800,1600
+42,2024-05-25,Auriculares BT,Accesorios,Ricardo Méndez,Oeste,15,60,900
+43,2024-05-28,SSD 1TB,Almacenamiento,María Torres,Centro,5,120,600
+44,2024-06-01,Tablet X,Tecnología,Sofía Ramírez,Norte,6,450,2700
+45,2024-06-04,Memoria USB 64GB,Almacenamiento,Carlos López,Sur,35,15,525
+46,2024-06-08,Smartwatch G5,Tecnología,Ana García,Norte,5,350,1750
+47,2024-06-12,Laptop Pro,Tecnología,María Torres,Centro,4,1200,4800
+48,2024-06-15,Mouse Inalámbrico,Accesorios,Laura Fernández,Este,22,25,550
+49,2024-06-18,Webcam 4K,Accesorios,Ricardo Méndez,Oeste,14,80,1120
+50,2024-06-22,Monitor 4K,Tecnología,Sofía Ramírez,Norte,3,800,2400
+51,2024-06-25,Teclado Mecánico,Accesorios,Ana García,Norte,9,90,810
+52,2024-06-28,Auriculares BT,Accesorios,Carlos López,Sur,11,60,660
