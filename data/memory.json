@@ -1,0 +1,14 @@
+{
+  "test-persistent-guardado": [
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-06-01T22:29:20.365678"
+    },
+    {
+      "role": "assistant",
+      "content": "La tienda vende 10 productos distintos, con un total de 477 unidades vendidas. Los productos más vendidos son la Memoria USB 64GB con 110 unidades vendidas, seguido del Mouse Inalámbrico con 100 unidades vendidas.",
+      "timestamp": "2026-06-01T22:29:20.393966"
+    }
+  ]
+}
