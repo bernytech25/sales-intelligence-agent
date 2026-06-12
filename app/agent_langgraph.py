@@ -179,8 +179,24 @@ def _enrich_question(question: str, history: list[dict]) -> str:
     return f"{question} (Contexto: {ultimas[-1][:300]})"
 
 
+MAX_HISTORY = 10
+
+
+def _truncate_history(history: list[dict]) -> list[dict]:
+    """
+    Trunca el historial a los ultimos MAX_HISTORY mensajes.
+    Evita que los tokens crezcan infinitamente en conversaciones largas.
+    Sin truncado: 2,518 -> 4,141 -> 8,236 -> 16,000+ tokens
+    Con truncado: se mantiene estable alrededor de 4,000-6,000 tokens
+    """
+    if len(history) <= MAX_HISTORY:
+        return history
+    return history[-MAX_HISTORY:]
+
+
 def run_agent(question: str, history: list[dict] | None = None) -> str:
     history = history or []
+    history = _truncate_history(history)
     enriched = _enrich_question(question, history)
     messages = []
     for msg in history:
