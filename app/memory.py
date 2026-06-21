@@ -4,10 +4,19 @@ Módulo de memoria del agente.
 Dos tipos:
 - InSessionMemory: historial dentro de una conversación (en RAM)
 - PersistentMemory: historial entre conversaciones (en disco, JSON)
+- CosmosMemory: historial entre conversaciones (Azure Cosmos DB)
 
-En producción, PersistentMemory se reemplaza por Cosmos DB o similar.
+El backend de memoria persistente se elige con la variable de entorno
+MEMORY_BACKEND:
+    MEMORY_BACKEND=json    -> usa el archivo local data/memory.json (default)
+    MEMORY_BACKEND=cosmos  -> usa Azure Cosmos DB
+
+Las tres clases comparten la misma interfaz pública
+(add_message, get_history, get_history_with_timestamps, clear),
+por lo que main.py no necesita saber cuál backend está activo.
 """
 
+import os
 import json
 from pathlib import Path
 from datetime import datetime
@@ -100,8 +109,15 @@ class PersistentMemory:
         return list(self._load().keys())
 
 
-# ── Instancias globales ───────────────────────────────────────────────────────
+# ── Selección de backend ──────────────────────────────────────────────────────
 # El servidor FastAPI las comparte entre requests.
 
 in_session_memory = InSessionMemory()
-persistent_memory = PersistentMemory()
+
+_backend = os.getenv("MEMORY_BACKEND", "json").lower()
+
+if _backend == "cosmos":
+    from app.cosmos_memory import CosmosMemory
+    persistent_memory = CosmosMemory()
+else:
+    persistent_memory = PersistentMemory()
