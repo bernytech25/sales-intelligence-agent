@@ -1,0 +1,20 @@
+pregunta,texto,lg_latencia,lg_ok,sk_latencia,sk_ok,diferencia,lg_answer,sk_answer
+1,¿Cuál es el resumen general de ventas?,7.2,✅,7.47,✅,0.27,"El resumen general de ventas muestra que se han generado $16.375.513 en ingresos totales, con un total de 15.052 transac","El resumen general de ventas muestra los siguientes datos clave:
+
+- **Ingresos totales**: $16,375,513.
+- **Cantidad de t"
+2,¿Quién vendió más?,7.65,✅,6.15,✅,-1.5,"La vendedora que más vendió es Laura Fernández, con un total de $414.412 en ventas. Esto sugiere que Laura es una de las",Error 500
+3,¿Qué región vendió más?,5.45,✅,13.66,✅,8.21,"La región que más vendió es la región Este, con un total de $4.294.095 en ventas. Esto sugiere que la región Este es una","La región que vendió más fue la **Este**, con un total de $4,294,095 en ventas. Le siguen:
+
+- **Centro**: $3,581,478.
+- "
+4,¿Cuál es el producto más vendido?,4.87,✅,61.09,✅,56.22,"El producto más vendido es la Memoria USB 64GB, con un total de 852 unidades vendidas. Esto sugiere que este producto es","El producto más vendido es la **Memoria USB 64GB**, con un total de 852 unidades vendidas. Esto sugiere que es un artícu"
+5,¿Quién vendió menos y por qué crees que fue así?,5.33,✅,26.71,✅,21.38,"El vendedor que vendió menos fue Gonzalo Álvarez, con un total de $250.840 en ventas. Esto sugiere que Gonzalo podría ne",Error 500
+6,¿Qué productos vende la tienda?,6.8,✅,25.88,✅,19.08,"La tienda vende una variedad de productos, incluyendo:
+
+* Memoria USB 64GB
+* Router WiFi 6 Mod-31
+* Microfono USB Mod-57",Error 500
+7,¿Cuánto vendió Ana en febrero?,7.04,✅,26.11,✅,19.07,Ana vendió $41.868 en febrero. Esto sugiere que febrero fue un mes exitoso para Ana en términos de ventas. Sería útil an,Error 500
+8,¿En qué región se vende más el producto más vendid,5.49,✅,62.4,✅,56.91,"El producto más vendido, la Memoria USB 64GB, se vende más en la región Este, con un total de 221 unidades vendidas y $3",TIMEOUT
+9,Si tuvieras que recomendar una acción para mejorar,6.24,✅,48.61,✅,42.37,"Basándome en los datos proporcionados, te recomendaría enfocarte en mejorar las ventas en la región Sur, ya que es la re","Basándome en los datos, recomendaría **potenciar las ventas en la región Este**, ya que lidera tanto en ingresos totales"

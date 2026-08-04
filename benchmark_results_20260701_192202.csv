@@ -1,0 +1,27 @@
+pregunta,texto,lg_latencia,lg_ok,sk_latencia,sk_ok,diferencia,lg_answer,sk_answer
+1,¿Cuál es el resumen general de ventas?,9.68,✅,6.51,✅,-3.17,El resumen general de ventas muestra que se han generado $16.375.513 en ingresos totales a través de 15.052 transaccione,"El resumen general de ventas muestra los siguientes datos clave:
+
+- **Ingresos totales:** $70,810.00
+- **Cantidad de tra"
+2,¿Quién vendió más?,6.37,✅,21.74,✅,15.37,"La vendedora que más vendió es Laura Fernández, con un total de $414.412 en ventas.","La vendedora que generó más ingresos fue **Ana García**, con un total de $15,390. 
+
+Es interesante notar que **María Tor"
+3,¿Qué región vendió más?,6.0,✅,62.38,✅,56.38,"La región que más vendió es la región Este, con un total de $4.294.095 en ventas.",TIMEOUT
+4,¿Cuál es el producto más vendido?,5.05,✅,62.39,✅,57.34,"El producto más vendido es la Memoria USB 64GB, con un total de 852 unidades vendidas.",TIMEOUT
+5,¿Cómo evolucionaron las ventas mes a mes?,6.66,✅,62.37,✅,55.71,"Las ventas han evolucionado de la siguiente manera:
+
+- Enero: $1.442.772
+- Febrero: $1.284.059
+- Marzo: $1.385.603
+- Abr",TIMEOUT
+6,¿Quién vendió menos y por qué crees que fue así?,5.99,✅,62.38,✅,56.39,"El vendedor que menos vendió es Gonzalo Álvarez, con un total de $250.840 en ventas. Esto puede deberse a varias razones",TIMEOUT
+7,¿Qué productos vende la tienda?,7.22,✅,62.37,✅,55.15,"La tienda vende una variedad de productos, incluyendo:
+
+* Memoria USB 64GB
+* Router WiFi 6 Mod-31
+* Microfono USB Mod-57",TIMEOUT
+8,¿Cuánto vendió Ana en febrero?,6.5,✅,54.17,✅,47.67,"Ana García vendió $41,868 en febrero.",Error 500
+9,¿En qué región se vende más el producto más vendid,5.0,✅,51.58,✅,46.58,"El producto más vendido, la Memoria USB 64GB, se vende más en la región Este, con un total de 221 unidades vendidas y un",Error 500
+10,Si tuvieras que recomendar una acción para mejorar,6.59,✅,49.5,✅,42.91,"Basándome en los datos proporcionados, puedo ver que el vendedor con mayores ventas es Laura Fernández, con un total de ","Para mejorar las ventas, recomendaría implementar las siguientes acciones:
+
+1. **Potenciar el producto más vendido:** La"

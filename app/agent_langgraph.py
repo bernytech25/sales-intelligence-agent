@@ -101,7 +101,7 @@ TOOLS_MAP = {t.name: t for t in TOOLS}
 
 def get_llm():
     llm = ChatGroq(
-        model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        model=os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile"),
         api_key=os.getenv("GROQ_API_KEY"),
         temperature=0,
     )
@@ -113,15 +113,15 @@ def get_llm():
 def node_llm(state: AgentState) -> AgentState:
     llm = get_llm()
     system = (
-        "Sos un asistente experto en análisis de ventas. "
-        "REGLA CRITICA: NUNCA digas que no tenes informacion si existe una tool que puede obtenerla. "
-        "Siempre usa las tools para responder preguntas sobre datos. "
-        "Si la pregunta usa pronombres como el, ella, ese, ese producto, revisa el historial "
-        "e identifica a qué persona o producto se refiere, luego usa la tool con ese nombre. "
-        "Si preguntan qué productos vende la tienda o cuántos productos hay, usa tool_lista_productos. "
-        "Si preguntan en qué región se vende un producto, usa tool_ventas_por_producto. "
-        "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
-        "Responde en español con insights accionables para el negocio."
+    "Sos un asistente experto en análisis de ventas. "
+    "REGLA CRITICA: NUNCA digas que no tenes informacion si existe una tool que puede obtenerla. "
+    "Siempre usa las tools para responder preguntas sobre datos. "
+    "Si la pregunta usa pronombres como el, ella, ese, ese producto, revisa el historial "
+    "e identifica a qué persona o producto se refiere, luego usa la tool con ese nombre. "
+    "Si preguntan qué productos vende la tienda o cuántos productos hay, usa tool_lista_productos. "
+    "Si preguntan en qué región se vende un producto, usa tool_ventas_por_producto. "
+    "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
+    "Responde en español con insights accionables para el negocio."
     )
     messages = [SystemMessage(content=system)] + state["messages"]
     response = llm.invoke(messages)

@@ -1,0 +1,15 @@
+pregunta,texto,lg_latencia,lg_ok,sk_latencia,sk_ok,diferencia,lg_answer,sk_answer
+1,¿Cuál es el resumen general de ventas?,6.1,✅,5.9,✅,-0.2,"El resumen general de ventas muestra que la tienda ha tenido un total de ingresos de $16,375,513, con un total de 15,052","El resumen general de ventas muestra los siguientes datos clave:
+
+- **Ingresos totales:** $16,375,513
+- **Cantidad de tr"
+2,¿Quién vendió más?,4.53,❌,6.27,✅,1.74,Error 500,Error 500
+3,¿Qué región vendió más?,3.24,❌,35.74,✅,32.5,Error 500,"La región que vendió más fue la región **Este**, con un total de $4,294,095 en ventas. Le siguen las regiones:
+
+- **Cent"
+4,¿Cuál es el producto más vendido?,3.24,❌,62.39,✅,59.15,Error 500,TIMEOUT
+5,¿Quién vendió menos y por qué crees que fue así?,3.22,❌,39.58,✅,36.36,Error 500,Error 500
+6,¿Qué productos vende la tienda?,3.24,❌,33.48,✅,30.24,Error 500,Error 500
+7,¿Cuánto vendió Ana en febrero?,3.24,❌,32.96,✅,29.72,Error 500,Error 500
+8,¿En qué región se vende más el producto más vendid,3.56,❌,62.39,✅,58.83,Error 500,TIMEOUT
+9,Si tuvieras que recomendar una acción para mejorar,3.33,❌,5.62,✅,2.29,Error 500,Error 500
