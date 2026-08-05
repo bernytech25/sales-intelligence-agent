@@ -8,8 +8,8 @@ Dos tipos:
 
 El backend de memoria persistente se elige con la variable de entorno
 MEMORY_BACKEND:
-    MEMORY_BACKEND=json    -> usa el archivo local data/memory.json (default)
-    MEMORY_BACKEND=cosmos  -> usa Azure Cosmos DB
+  MEMORY_BACKEND=json -> usa el archivo local data/memory.json (default)
+  MEMORY_BACKEND=cosmos -> usa Azure Cosmos DB
 
 Las tres clases comparten la misma interfaz pública
 (add_message, get_history, get_history_with_timestamps, clear),
@@ -20,7 +20,6 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime
-
 
 # ── Memoria en sesión ─────────────────────────────────────────────────────────
 
@@ -54,18 +53,16 @@ class InSessionMemory:
     def list_sessions(self) -> list[str]:
         return list(self._sessions.keys())
 
-
 # ── Memoria persistente ───────────────────────────────────────────────────────
 
 MEMORY_FILE = Path(__file__).parent.parent / "data" / "memory.json"
-
 
 class PersistentMemory:
     """
     Persiste el historial de conversaciones en un archivo JSON.
     Sobrevive reinicios del servidor.
 
-    En producción → reemplazar por Cosmos DB, PostgreSQL, Redis, etc.
+    En producción -> reemplazar por Cosmos DB, PostgreSQL, Redis, etc.
     La interfaz (add_message, get_history) no cambia.
     """
 
@@ -108,16 +105,20 @@ class PersistentMemory:
     def list_sessions(self) -> list[str]:
         return list(self._load().keys())
 
-
 # ── Selección de backend ──────────────────────────────────────────────────────
 # El servidor FastAPI las comparte entre requests.
 
 in_session_memory = InSessionMemory()
 
-_backend = os.getenv("MEMORY_BACKEND", "json").lower()
+# 🔒 COSMOS DB COMENTADO — ya no estamos en Azure, usamos JSON local
+# Si en el futuro vuelves a Azure, descomenta las líneas de abajo.
+#
+# _backend = os.getenv("MEMORY_BACKEND", "json").lower()
+#
+# if _backend == "cosmos":
+#     from app.cosmos_memory import CosmosMemory
+#     persistent_memory = CosmosMemory()
+# else:
+#     persistent_memory = PersistentMemory()
 
-if _backend == "cosmos":
-    from app.cosmos_memory import CosmosMemory
-    persistent_memory = CosmosMemory()
-else:
-    persistent_memory = PersistentMemory()
+persistent_memory = PersistentMemory()
