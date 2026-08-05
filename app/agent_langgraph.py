@@ -1,5 +1,5 @@
 """
-Agente de análisis de ventas - LangGraph + Groq
+Agente de análisis de ventas - LangGraph + Gemini
 """
 
 import os
@@ -7,8 +7,8 @@ import json
 from typing import TypedDict, Annotated
 
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage, SystemMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
@@ -27,12 +27,10 @@ from app.tools import (
 
 load_dotenv()
 
-
 # ── Estado ────────────────────────────────────────────────────────────────────
 
 class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
-
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
 
@@ -81,7 +79,6 @@ def tool_resumen_general() -> str:
     """Obtiene un resumen ejecutivo: ingresos totales, ticket promedio, cantidad de transacciones."""
     return json.dumps(resumen_general(), ensure_ascii=False)
 
-
 TOOLS = [
     tool_ventas_por_vendedor,
     tool_ventas_por_categoria,
@@ -96,23 +93,9 @@ TOOLS = [
 
 TOOLS_MAP = {t.name: t for t in TOOLS}
 
-
 # ── LLM ───────────────────────────────────────────────────────────────────────
 
-def get_llm():
-    llm = ChatGroq(
-        model=os.getenv("GROQ_MODEL", "llama-3.1-70b-versatile"),
-        api_key=os.getenv("GROQ_API_KEY"),
-        temperature=0,
-    )
-    return llm.bind_tools(TOOLS)
-
-
-# ── Nodos ─────────────────────────────────────────────────────────────────────
-
-def node_llm(state: AgentState) -> AgentState:
-    llm = get_llm()
-    system = (
+SYSTEM_PROMPT = (
     "Sos un asistente experto en análisis de ventas. "
     "REGLA CRITICA: NUNCA digas que no tenes informacion si existe una tool que puede obtenerla. "
     "Siempre usa las tools para responder preguntas sobre datos. "
@@ -122,11 +105,23 @@ def node_llm(state: AgentState) -> AgentState:
     "Si preguntan en qué región se vende un producto, usa tool_ventas_por_producto. "
     "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
     "Responde en español con insights accionables para el negocio."
+)
+
+def get_llm():
+    llm = ChatGoogleGenerativeAI(
+        model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        temperature=0,
     )
-    messages = [SystemMessage(content=system)] + state["messages"]
+    return llm.bind_tools(TOOLS)
+
+# ── Nodos ─────────────────────────────────────────────────────────────────────
+
+def node_llm(state: AgentState) -> AgentState:
+    llm = get_llm()
+    messages = [HumanMessage(content=f"[INSTRUCCION DE SISTEMA]: {SYSTEM_PROMPT}")] + state["messages"]
     response = llm.invoke(messages)
     return {"messages": [response]}
-
 
 def node_tools(state: AgentState) -> AgentState:
     last_message = state["messages"][-1]
@@ -141,13 +136,11 @@ def node_tools(state: AgentState) -> AgentState:
         ))
     return {"messages": tool_results}
 
-
 def should_continue(state: AgentState) -> str:
     last_message = state["messages"][-1]
     if hasattr(last_message, "tool_calls") and last_message.tool_calls:
         return "tools"
     return END
-
 
 # ── Grafo ─────────────────────────────────────────────────────────────────────
 
@@ -160,9 +153,7 @@ def build_agent():
     graph.add_edge("tools", "llm")
     return graph.compile()
 
-
 _agent = build_agent()
-
 
 # ── Función pública ───────────────────────────────────────────────────────────
 
@@ -178,20 +169,31 @@ def _enrich_question(question: str, history: list[dict]) -> str:
         return question
     return f"{question} (Contexto: {ultimas[-1][:300]})"
 
-
 MAX_HISTORY = 10
 
-
 def _truncate_history(history: list[dict]) -> list[dict]:
-    """
-    Trunca el historial a los ultimos MAX_HISTORY mensajes.
-    Evita que los tokens crezcan infinitamente en conversaciones largas.
-    Sin truncado: 2,518 -> 4,141 -> 8,236 -> 16,000+ tokens
-    Con truncado: se mantiene estable alrededor de 4,000-6,000 tokens
-    """
     if len(history) <= MAX_HISTORY:
         return history
     return history[-MAX_HISTORY:]
+
+
+def _extract_answer(result: dict) -> str:
+    """Extrae texto de la respuesta del agente. Funciona con Groq (str) y Gemini (list)."""
+    content = result["messages"][-1].content
+
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, list):
+        texts = []
+        for part in content:
+            if isinstance(part, dict):
+                texts.append(part.get("text", ""))
+            else:
+                texts.append(str(part))
+        return " ".join(texts)
+
+    return str(content)
 
 
 def run_agent(question: str, history: list[dict] | None = None) -> str:
@@ -206,4 +208,4 @@ def run_agent(question: str, history: list[dict] | None = None) -> str:
             messages.append(AIMessage(content=msg["content"]))
     messages.append(HumanMessage(content=enriched))
     result = _agent.invoke({"messages": messages})
-    return result["messages"][-1].content
+    return _extract_answer(result)

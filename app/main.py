@@ -1,5 +1,5 @@
 """
-FastAPI - Sales Agent API con autenticación JWT
+Agente de análisis de ventas con LangGraph + Gemini + Memoria + JWT Auth
 
 Endpoints públicos (no requieren token):
   GET  /              → health check
