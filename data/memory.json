@@ -9,6 +9,16 @@
       "role": "assistant",
       "content": "La tienda vende 10 productos distintos, con un total de 477 unidades vendidas. Los productos más vendidos son la Memoria USB 64GB con 110 unidades vendidas, seguido del Mouse Inalámbrico con 100 unidades vendidas.",
       "timestamp": "2026-06-01T22:29:20.393966"
+    },
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-08-05T21:31:19.536978"
+    },
+    {
+      "role": "assistant",
+      "content": "La tienda cuenta actualmente con un catálogo de **100 productos distintos**, los cuales han generado un volumen total de 65,427 unidades vendidas.\n\nComo insight para tu gestión, te sugiero revisar el desempeño de los productos con menor rotación dentro de este catálogo de 100 ítems, para evaluar si es necesario realizar promociones o ajustar el inventario y así optimizar el espacio de almacenamiento y el capital de trabajo.",
+      "timestamp": "2026-08-05T21:31:19.554957"
     }
   ]
 }
