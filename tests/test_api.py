@@ -6,6 +6,7 @@ Usa httpx.TestClient para simular requests HTTP sin levantar el servidor.
 import pytest
 import sys
 from pathlib import Path
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -57,7 +58,14 @@ def test_delete_memory_retorna_cleared(auth_headers):
     assert response.status_code == 200
     assert response.json()["status"] == "cleared"
 
-# ── Chat ──────────────────────────────────────────────────────────────────────
+# ── Chat (con mock del agente, sin LLM real) ──────────────────────────────────
+
+MOCK_ANSWER = "Laura Fernández vendió $414,412."
+
+@pytest.fixture
+def mock_agent():
+    with patch("app.main.run_agent", return_value=MOCK_ANSWER) as m:
+        yield m
 
 def test_chat_pregunta_vacia_retorna_400(auth_headers):
     response = client.post("/chat", json={
@@ -66,7 +74,7 @@ def test_chat_pregunta_vacia_retorna_400(auth_headers):
     }, headers=auth_headers)
     assert response.status_code == 400
 
-def test_chat_retorna_estructura_correcta(auth_headers):
+def test_chat_retorna_estructura_correcta(auth_headers, mock_agent):
     response = client.post("/chat", json={
         "session_id": "test-estructura",
         "question": "¿Cuál es el resumen de ventas?"
@@ -76,8 +84,9 @@ def test_chat_retorna_estructura_correcta(auth_headers):
     assert "session_id" in data
     assert "question" in data
     assert "answer" in data
+    assert data["answer"] == MOCK_ANSWER
 
-def test_chat_respuesta_no_vacia(auth_headers):
+def test_chat_respuesta_no_vacia(auth_headers, mock_agent):
     response = client.post("/chat", json={
         "session_id": "test-respuesta",
         "question": "¿Cuántos vendedores hay?"
@@ -85,7 +94,7 @@ def test_chat_respuesta_no_vacia(auth_headers):
     assert response.status_code == 200
     assert len(response.json()["answer"]) > 0
 
-def test_chat_guarda_en_memoria(auth_headers):
+def test_chat_guarda_en_memoria(auth_headers, mock_agent):
     session_id = "test-memoria-guardado"
     client.post("/chat", json={
         "session_id": session_id,
@@ -94,7 +103,7 @@ def test_chat_guarda_en_memoria(auth_headers):
     response = client.get(f"/memory/{session_id}", headers=auth_headers)
     assert response.json()["total"] == 2  # user + assistant
 
-def test_chat_persistent_guarda_historial(auth_headers):
+def test_chat_persistent_guarda_historial(auth_headers, mock_agent):
     session_id = "test-persistent-guardado"
     client.post("/chat/persistent", json={
         "session_id": session_id,
