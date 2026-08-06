@@ -2,15 +2,6 @@
 
 > Production-ready conversational sales analysis agent. Enables natural language queries on enterprise sales datasets, eliminating the dependency on SQL or BI dashboards for non-technical users.
 
-## 🎯 Architectural Variants
-
-This repository contains the **LangGraph + Groq variant**. I also developed an equivalent variant using **Semantic Kernel + Azure OpenAI GPT-4o** in a separate repository, evaluated side-by-side via a real latency benchmark.
-
-| Variant | LLM | Avg. Latency | Cost | SLA |
-|---|---|---|---|---|
-| **LangGraph + Groq** (this repo) | LLaMA 3.3-70b | ~6.5s | $0.00 | No SLA |
-| Semantic Kernel + Azure OpenAI | GPT-4o | Variable | ~$0.003/request | 99.9% uptime |
-
 ## 🏗️ Architecture
 
 ```
@@ -35,8 +26,9 @@ Memory      Memory (JSON / Cosmos DB)
          │
     ┌────┴────┐
     ▼         ▼
-  Groq      9 Tools
- (LLaMA)   (Pandas)
+  Gemini     9 Tools
+(3.1 Flash   (Pandas)
+ Lite)
 ```
 
 ## 📦 Tech Stack
@@ -44,15 +36,15 @@ Memory      Memory (JSON / Cosmos DB)
 | Layer | Technology |
 |---|---|
 | **Orchestration** | LangGraph, LangChain |
-| **LLM** | Groq Cloud API (LLaMA 3.3-70b-versatile) |
+| **LLM** | Google Gemini 3.1 Flash Lite (via `langchain-google-genai`) |
 | **API** | FastAPI, Uvicorn, Pydantic |
-| **Auth** | JWT (PyJWT/jose), Passlib/bcrypt, OAuth2PasswordBearer |
+| **Auth** | JWT (python-jose), Passlib/bcrypt, OAuth2PasswordBearer |
 | **Data Analysis** | Pandas |
 | **Memory** | In-Session (RAM), Persistent (JSON), Cosmos DB (Azure) |
-| **Infrastructure** | Docker, Azure Container Apps |
-| **CI/CD** | GitHub Actions |
-| **Testing** | Pytest |
-| **Benchmark** | httpx, Rich, pandas |
+| **Infrastructure** | Docker |
+| **CI/CD** | GitHub Actions (tests + Docker build) |
+| **Testing** | Pytest, standalone LangSmith trace script |
+| **Observability** | LangSmith tracing |
 
 ## 🗂️ Project Structure
 
@@ -60,7 +52,7 @@ Memory      Memory (JSON / Cosmos DB)
 sales-intelligence-agent/
 ├── app/
 │   ├── main.py              # FastAPI - HTTP endpoints + JWT Auth
-│   ├── agent_langgraph.py   # LangGraph agent (state graph)
+│   ├── agent_langgraph.py   # LangGraph agent (state graph, Gemini)
 │   ├── tools.py             # 9 data analysis functions (Pandas)
 │   ├── memory.py            # InSessionMemory + PersistentMemory (JSON)
 │   ├── cosmos_memory.py     # CosmosMemory (Azure Cosmos DB NoSQL)
@@ -72,9 +64,9 @@ sales-intelligence-agent/
 │   ├── test_tools.py        # Unit tests for the 9 tools
 │   ├── test_api.py          # API integration tests
 │   └── test_memoria.py      # Truncated memory test
-├── benchmark.py             # Benchmark: LangGraph vs Semantic Kernel
+├── test_langsmith.py        # Standalone smoke test w/ LangSmith tracing (no FastAPI needed)
 ├── .github/workflows/
-│   └── ci-cd.yml            # CI/CD: Tests → Docker Build → Azure Deploy
+│   └── ci-cd.yml            # CI/CD: Tests → Docker Build
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
@@ -96,10 +88,13 @@ sales-intelligence-agent/
 
 ```bash
 # 1. Get token
-curl -X POST http://localhost:8000/auth/token   -d "username=admin&password=admin123"
+curl -X POST http://localhost:8000/auth/token -d "username=admin&password=admin123"
 
 # 2. Query the agent
-curl -X POST http://localhost:8000/chat   -H "Authorization: Bearer <TOKEN>"   -H "Content-Type: application/json"   -d '{"session_id": "user-123", "question": "Who is the top seller?"}'
+curl -X POST http://localhost:8000/chat \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "user-123", "question": "Who is the top seller?"}'
 ```
 
 ## 🧠 LangGraph Agent
@@ -143,47 +138,34 @@ All classes share the same public interface (`add_message`, `get_history`, `clea
 ## 🧪 Tests
 
 ```bash
-# Unit tests for tools (30+ tests)
+# Unit tests for tools (26 tests)
 pytest tests/test_tools.py -v
 
-# API integration tests
+# API integration tests (calls the real Gemini API — requires GOOGLE_API_KEY)
 pytest tests/test_api.py -v
 
 # Truncated memory test
 python tests/test_memoria.py
+
+# Standalone smoke test with LangSmith tracing, no FastAPI required
+python test_langsmith.py
 ```
 
-## 📊 Benchmark
-
-The `benchmark.py` script runs the same 10 questions against both variants (LangGraph/Groq on `:8000` and Semantic Kernel/Azure OpenAI on `:8001`), measuring real latency and generating a comparison table + CSV export.
-
-```bash
-# Run both services in parallel
-uvicorn app.main:app --port 8000          # LangGraph
-# (in other repo) uvicorn app.main:app --port 8001  # Semantic Kernel
-
-python benchmark.py
-```
+`test_langsmith.py` runs 10 representative questions directly against `run_agent()` and prints pass/fail + latency per question, with full traces sent to LangSmith if `LANGCHAIN_TRACING_V2=true`.
 
 ## 🐳 Docker
 
 ```bash
 docker build -t sales-agent .
-docker run -p 8000:8000 -e GROQ_API_KEY=xxx sales-agent
+docker run -p 8000:8000 -e GOOGLE_API_KEY=xxx sales-agent
 ```
 
-## ☁️ Deploy on Azure Container Apps
+## ⚙️ CI/CD
 
-The CI/CD pipeline in `.github/workflows/ci-cd.yml` automates:
+The pipeline in `.github/workflows/ci-cd.yml` runs on every push/PR to `main`:
 
-1. **Tests** → runs `pytest tests/test_tools.py`
-2. **Build & Push** → builds Docker image and pushes to Azure Container Registry
-3. **Deploy** → updates Azure Container Apps with the new image
-
-```bash
-# Required GitHub Secrets:
-# AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
-```
+1. **Tests** → `pytest tests/test_tools.py` and `pytest tests/test_api.py`
+2. **Build** → builds the Docker image to verify it compiles cleanly
 
 ## ⚙️ Local Setup
 
@@ -191,9 +173,7 @@ The CI/CD pipeline in `.github/workflows/ci-cd.yml` automates:
 # 1. Clone and install
 pip install -r requirements.txt
 
-# 2. Configure environment variables
-cp .env.example .env
-# Edit .env: GROQ_API_KEY, GROQ_MODEL, JWT_SECRET_KEY, etc.
+# 2. Configure environment variables — create a .env file (see table below)
 
 # 3. Run
 uvicorn app.main:app --reload
@@ -206,8 +186,8 @@ open http://localhost:8000/docs
 
 | Variable | Description | Default |
 |---|---|---|
-| `GROQ_API_KEY` | Groq API key | — |
-| `GROQ_MODEL` | Groq model | `llama-3.3-70b-versatile` |
+| `GOOGLE_API_KEY` | Gemini API key | — |
+| `GEMINI_MODEL` | Gemini model | `gemini-3.1-flash-lite` |
 | `JWT_SECRET_KEY` | Secret key for JWT signing | `dev-secret-key-change-in-production` |
 | `JWT_EXPIRE_MINUTES` | Token expiration in minutes | `60` |
 | `MEMORY_BACKEND` | Memory backend (`json` / `cosmos`) | `json` |
@@ -215,14 +195,17 @@ open http://localhost:8000/docs
 | `COSMOS_KEY` | Azure Cosmos DB key | — |
 | `COSMOS_DATABASE` | Database name | `sales-agent-db` |
 | `COSMOS_CONTAINER` | Container name | `memory` |
+| `LANGCHAIN_TRACING_V2` | Enable LangSmith tracing | `false` |
+| `LANGCHAIN_API_KEY` | LangSmith API key | — |
+| `LANGCHAIN_PROJECT` | LangSmith project name | — |
 
 ## 📝 Notes
 
-- The **Semantic Kernel + Azure OpenAI GPT-4o** variant is in a separate repository. Both variants share the same 9 Pandas tools and the same FastAPI, enabling objective comparison.
 - History truncation to 10 messages keeps token consumption stable at ~4,000-6,000 tokens per conversation.
 - Docker healthcheck verifies the service responds before marking the container as healthy.
+- Latency per request varies (observed ~5-15s) depending on the number of LLM round-trips the agent needs (each tool call adds one) and on Gemini's own response-time variability.
 
 ---
 
-**Author:** Bernardo Mantilla Afanador  
+**Author:** Bernardo Mantilla Afanador
 **License:** MIT
