@@ -11,9 +11,17 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.main import app
+from app.auth import create_access_token
 
 client = TestClient(app)
 
+# ── Fixture: token JWT para tests ─────────────────────────────────────────────
+
+@pytest.fixture
+def auth_headers():
+    """Genera un token JWT válido para usar en tests."""
+    token = create_access_token(data={"sub": "admin"})
+    return {"Authorization": f"Bearer {token}"}
 
 # ── Health check ──────────────────────────────────────────────────────────────
 
@@ -25,75 +33,72 @@ def test_health_retorna_ok():
     response = client.get("/")
     assert response.json()["status"] == "ok"
 
-
 # ── Ventas resumen ────────────────────────────────────────────────────────────
 
-def test_ventas_resumen_retorna_200():
-    response = client.get("/ventas/resumen")
+def test_ventas_resumen_retorna_200(auth_headers):
+    response = client.get("/ventas/resumen", headers=auth_headers)
     assert response.status_code == 200
 
-def test_ventas_resumen_tiene_campos():
-    response = client.get("/ventas/resumen")
+def test_ventas_resumen_tiene_campos(auth_headers):
+    response = client.get("/ventas/resumen", headers=auth_headers)
     data = response.json()
     assert "total_ingresos" in data
     assert "total_transacciones" in data
 
-
 # ── Memoria ───────────────────────────────────────────────────────────────────
 
-def test_get_memory_session_vacia():
-    response = client.get("/memory/session-inexistente")
+def test_get_memory_session_vacia(auth_headers):
+    response = client.get("/memory/session-inexistente", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["total"] == 0
 
-def test_delete_memory_retorna_cleared():
-    response = client.delete("/memory/session-test-delete")
+def test_delete_memory_retorna_cleared(auth_headers):
+    response = client.delete("/memory/session-test-delete", headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["status"] == "cleared"
 
-
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
-def test_chat_pregunta_vacia_retorna_400():
+def test_chat_pregunta_vacia_retorna_400(auth_headers):
     response = client.post("/chat", json={
         "session_id": "test-vacio",
         "question": "   "
-    })
+    }, headers=auth_headers)
     assert response.status_code == 400
 
-def test_chat_retorna_estructura_correcta():
+def test_chat_retorna_estructura_correcta(auth_headers):
     response = client.post("/chat", json={
         "session_id": "test-estructura",
         "question": "¿Cuál es el resumen de ventas?"
-    })
+    }, headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert "session_id" in data
     assert "question" in data
     assert "answer" in data
 
-def test_chat_respuesta_no_vacia():
+def test_chat_respuesta_no_vacia(auth_headers):
     response = client.post("/chat", json={
         "session_id": "test-respuesta",
         "question": "¿Cuántos vendedores hay?"
-    })
+    }, headers=auth_headers)
     assert response.status_code == 200
     assert len(response.json()["answer"]) > 0
 
-def test_chat_guarda_en_memoria():
+def test_chat_guarda_en_memoria(auth_headers):
     session_id = "test-memoria-guardado"
     client.post("/chat", json={
         "session_id": session_id,
         "question": "¿Cuál es el resumen de ventas?"
-    })
-    response = client.get(f"/memory/{session_id}")
+    }, headers=auth_headers)
+    response = client.get(f"/memory/{session_id}", headers=auth_headers)
     assert response.json()["total"] == 2  # user + assistant
 
-def test_chat_persistent_guarda_historial():
+def test_chat_persistent_guarda_historial(auth_headers):
     session_id = "test-persistent-guardado"
     client.post("/chat/persistent", json={
         "session_id": session_id,
         "question": "¿Cuántos productos hay?"
-    })
-    response = client.get(f"/memory/{session_id}?persistent=true")
+    }, headers=auth_headers)
+    response = client.get(f"/memory/{session_id}?persistent=true", headers=auth_headers)
     assert response.json()["total"] >= 2
