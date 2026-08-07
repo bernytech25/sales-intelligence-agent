@@ -104,7 +104,7 @@ SYSTEM_PROMPT = (
     "Si preguntan qué productos vende la tienda o cuántos productos hay, usa tool_lista_productos. "
     "Si preguntan en qué región se vende un producto, usa tool_ventas_por_producto. "
     "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
-    "Responde en español con insights accionables para el negocio."
+    "Responde en español o ingles dependiendo el idioma de la pregunta con insights accionables para el negocio."
 )
 
 def get_llm():

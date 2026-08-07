@@ -1,24 +1,14 @@
 {
-  "test-persistent-guardado": [
+  "user-123": [
     {
       "role": "user",
-      "content": "¿Cuántos productos hay?",
-      "timestamp": "2026-06-01T22:29:20.365678"
+      "content": "¿Quién vendió más este trimestre?",
+      "timestamp": "2026-08-06T20:52:41.958774"
     },
     {
       "role": "assistant",
-      "content": "La tienda vende 10 productos distintos, con un total de 477 unidades vendidas. Los productos más vendidos son la Memoria USB 64GB con 110 unidades vendidas, seguido del Mouse Inalámbrico con 100 unidades vendidas.",
-      "timestamp": "2026-06-01T22:29:20.393966"
-    },
-    {
-      "role": "user",
-      "content": "¿Cuántos productos hay?",
-      "timestamp": "2026-08-05T21:31:19.536978"
-    },
-    {
-      "role": "assistant",
-      "content": "La tienda cuenta actualmente con un catálogo de **100 productos distintos**, los cuales han generado un volumen total de 65,427 unidades vendidas.\n\nComo insight para tu gestión, te sugiero revisar el desempeño de los productos con menor rotación dentro de este catálogo de 100 ítems, para evaluar si es necesario realizar promociones o ajustar el inventario y así optimizar el espacio de almacenamiento y el capital de trabajo.",
-      "timestamp": "2026-08-05T21:31:19.554957"
+      "content": "La vendedora con el mejor desempeño en este trimestre es **Laura Fernández**, quien alcanzó un total de **$414,412** en ventas.\n\n**Insight para el negocio:**\nEl rendimiento de Laura destaca significativamente sobre el promedio del equipo. Sería recomendable analizar sus técnicas de venta o el tipo de clientes que gestiona para identificar buenas prácticas que puedan ser replicadas por el resto del equipo comercial, especialmente con aquellos vendedores que se encuentran en los rangos inferiores de facturación (como Gonzalo Álvarez o Guillermo Ramos), con el fin de elevar el piso de ventas general.",
+      "timestamp": "2026-08-06T20:52:41.990123"
     }
   ]
 }

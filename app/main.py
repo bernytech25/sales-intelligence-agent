@@ -32,7 +32,7 @@ from app.auth import (
 
 app = FastAPI(
     title="Sales Agent API",
-    description="Agente de análisis de ventas con LangGraph + Groq + Memoria + JWT Auth",
+    description="Agente de análisis de ventas con LangGraph + Gemini + Memoria + JWT Auth",
     version="3.0.0",
 )
 
