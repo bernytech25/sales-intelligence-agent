@@ -1,0 +1,25 @@
+# Build stage
+FROM python:3.11-slim
+
+LABEL maintainer="sales-agent"
+LABEL description="Servidor MCP del agente de analisis de ventas (streamable-http)"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    MCP_TRANSPORT=streamable-http
+
+WORKDIR /app
+
+# Instalar dependencias primero (cacheable layer)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar codigo
+COPY app/ ./app/
+COPY data/ ./data/
+
+# Usuario no-root por seguridad
+RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+USER appuser
+
+CMD ["python", "-m", "app.mcp_server"]
