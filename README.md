@@ -135,6 +135,58 @@ All classes share the same public interface (`add_message`, `get_history`, `clea
 - OAuth2 Password Bearer scheme.
 - In production: migrate `USERS_DB` to Cosmos DB or SQL.
 
+## 🔌 MCP Server
+
+An alternative access path to the same 9 analysis tools, via the [Model
+Context Protocol](https://modelcontextprotocol.io) — usable from any MCP
+client (Claude Desktop, Claude.ai, Cursor, etc.), no HTTP client or LangGraph
+knowledge required. `app/mcp_server.py` wraps `app/tools.py` directly; the
+business logic is not duplicated between the FastAPI and MCP paths.
+
+### Local usage (stdio)
+
+```bash
+pip install -r requirements.txt
+python -m app.mcp_server
+```
+
+Then add it to your MCP client's config file (e.g. `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "sales-intelligence-agent": {
+      "command": "<absolute-path-to-your-venv>/Scripts/python.exe",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "<absolute-path-to-project-root>",
+      "env": {
+        "PYTHONPATH": "<absolute-path-to-project-root>"
+      }
+    }
+  }
+}
+```
+
+> **Windows note:** the `env.PYTHONPATH` entry works around a known issue
+> where Claude Desktop on Windows doesn't always apply `cwd` before launching
+> the subprocess, which otherwise causes `ModuleNotFoundError: No module
+> named 'app'`. On macOS/Linux it's usually unnecessary but harmless to leave in.
+
+On macOS/Linux, `command` is typically `<path-to-venv>/bin/python`.
+
+### Remote usage (streamable-http)
+
+```bash
+export MCP_TRANSPORT=streamable-http
+export PORT=8080
+export MCP_AUTH_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+python -m app.mcp_server
+```
+
+Requires `Authorization: Bearer <MCP_AUTH_TOKEN>` on every request — the
+server refuses to start without `MCP_AUTH_TOKEN` set, to avoid accidentally
+exposing it unauthenticated.
+
 ## 🧪 Tests
 
 ```bash
