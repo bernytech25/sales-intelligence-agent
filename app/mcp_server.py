@@ -25,6 +25,7 @@ import json
 import secrets
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -45,6 +46,14 @@ from app.tools import (
 # en Claude Desktop), y las instrucciones cumplen el mismo rol que el
 # SYSTEM_PROMPT de agent_langgraph.py: orientan al LLM sobre cuándo y cómo
 # usar estas tools.
+def _allowed_hosts():
+    hosts = ["127.0.0.1", "127.0.0.1:8080", "localhost", "localhost:8080"]
+    extra = os.environ.get("ALLOWED_HOST")
+    if extra:
+        hosts.append(extra)
+    return hosts
+
+
 mcp = FastMCP(
     name="sales-intelligence-agent",
     instructions=(
@@ -54,6 +63,7 @@ mcp = FastMCP(
         "(el, ella, ese producto), identificá primero a qué vendedor o producto se "
         "refiere antes de llamar a la tool correspondiente."
     ),
+    transport_security=TransportSecuritySettings(allowed_hosts=_allowed_hosts()),
 )
 
 
