@@ -57,6 +57,30 @@ def ventas_vendedor_por_mes(vendedor: str) -> dict:
     return {"vendedor": vendedor, "ventas_por_mes": resultado.to_dict()}
 
 
+def vendedor_ranking_periodo(mes_desde: str, mes_hasta: str, orden: str = "desc") -> dict:
+    """Rankea a los vendedores por ventas totales dentro de un rango de meses
+    (formato YYYY-MM para ambos límites, inclusive). Usar para preguntas del
+    tipo '¿quién vendió más/menos en los últimos N meses?' -- evita tener que
+    consultar vendedor por vendedor o mes por mes para armar el ranking.
+    orden='desc' -> el primero es el que más vendió; orden='asc' -> el que menos."""
+    df = _load_df()
+    df["fecha"] = pd.to_datetime(df["fecha"])
+    df["mes"] = df["fecha"].dt.strftime("%Y-%m")
+    filtro = df[(df["mes"] >= mes_desde) & (df["mes"] <= mes_hasta)]
+    if filtro.empty:
+        meses_disponibles = sorted(df["mes"].unique().tolist())
+        return {"error": f"No hay datos entre '{mes_desde}' y '{mes_hasta}'.", "meses_disponibles": meses_disponibles}
+    resultado = filtro.groupby("vendedor")["total"].sum().sort_values(ascending=(orden == "asc"))
+    extremo = resultado.index[0]
+    return {
+        "periodo": f"{mes_desde} a {mes_hasta}",
+        "orden": orden,
+        "vendedor": extremo,
+        "total_vendido": float(resultado[extremo]),
+        "ranking_completo": resultado.to_dict(),
+    }
+
+
 def ventas_producto_por_region(producto: str) -> dict:
     df = _load_df()
     filtro = df[df["producto"].str.lower() == producto.lower()]

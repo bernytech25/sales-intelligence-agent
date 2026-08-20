@@ -25,6 +25,7 @@ import json
 import secrets
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -34,6 +35,7 @@ from app.tools import (
     ventas_por_region,
     ventas_por_mes,
     ventas_vendedor_por_mes,
+    vendedor_ranking_periodo,
     ventas_producto_por_region,
     lista_productos,
     producto_mas_vendido,
@@ -45,6 +47,18 @@ from app.tools import (
 # en Claude Desktop), y las instrucciones cumplen el mismo rol que el
 # SYSTEM_PROMPT de agent_langgraph.py: orientan al LLM sobre cuándo y cómo
 # usar estas tools.
+def _allowed_hosts() -> list[str]:
+    """Hosts permitidos para el header Host (protección DNS rebinding del SDK).
+    El SDK exige coincidencia EXACTA (no wildcards de subdominio tipo *.run.app),
+    así que el host real de Cloud Run se pasa por la variable ALLOWED_HOST en
+    el momento del deploy (--set-env-vars ALLOWED_HOST=<tu-url>.run.app)."""
+    hosts = ["127.0.0.1", "127.0.0.1:8080", "localhost", "localhost:8080"]
+    extra = os.environ.get("ALLOWED_HOST")
+    if extra:
+        hosts.append(extra)
+    return hosts
+
+
 mcp = FastMCP(
     name="sales-intelligence-agent",
     instructions=(
@@ -54,6 +68,7 @@ mcp = FastMCP(
         "(el, ella, ese producto), identificá primero a qué vendedor o producto se "
         "refiere antes de llamar a la tool correspondiente."
     ),
+    transport_security=TransportSecuritySettings(allowed_hosts=_allowed_hosts()),
 )
 
 
@@ -92,6 +107,17 @@ def tool_ventas_vendedor_por_mes(vendedor: str) -> str:
     """Obtiene las ventas mes a mes de un vendedor específico.
     Usar cuando pregunten cuánto vendió una persona en un mes."""
     return json.dumps(ventas_vendedor_por_mes(vendedor), ensure_ascii=False)
+
+
+@mcp.tool()
+def tool_vendedor_ranking_periodo(mes_desde: str, mes_hasta: str, orden: str = "desc") -> str:
+    """Rankea vendedores por ventas totales en un rango de meses (formato
+    YYYY-MM, ej. mes_desde='2024-10' mes_hasta='2024-12' para el último
+    trimestre). orden='desc' da el que más vendió primero; orden='asc' da el
+    que menos vendió primero. Usar para '¿quién vendió más/menos en los
+    últimos N meses?' en una sola llamada, en vez de consultar vendedor por
+    vendedor o mes por mes."""
+    return json.dumps(vendedor_ranking_periodo(mes_desde, mes_hasta, orden), ensure_ascii=False)
 
 
 @mcp.tool()
