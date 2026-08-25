@@ -5,31 +5,37 @@
 ## 🏗️ Architecture
 
 ```
-User
-  │ POST /chat
-  ▼
-┌─────────────────┐
-│   FastAPI       │  ← JWT Auth, 6 endpoints
-│   (main.py)     │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    ▼         ▼
-In-Session  Persistent
-Memory      Memory (JSON / Cosmos DB)
-    │
-    ▼
-┌─────────────────┐
-│  LangGraph      │  ← State graph
-│  Agent          │     LLM → Tools → LLM
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    ▼         ▼
-  Gemini     9 Tools
+User (HTTP)                          User (MCP client:
+  │ POST /chat                        Claude Desktop, Cursor, etc.)
+  ▼                                     │
+┌─────────────────┐                    ▼
+│   FastAPI       │  ← JWT Auth  ┌─────────────────┐
+│   (main.py)     │              │  MCP Server     │  ← Bearer token
+└────────┬────────┘              │  (mcp_server.py)│     (stdio or
+         │                       └────────┬────────┘      streamable-http)
+    ┌────┴────┐                           │
+    ▼         ▼                           │
+In-Session  Persistent                    │
+Memory      Memory (JSON / Cosmos DB)     │
+    │                                     │
+    ▼                                     │
+┌─────────────────┐                       │
+│  LangGraph      │  ← State graph        │
+│  Agent          │     LLM → Tools → LLM │
+└────────┬────────┘                       │
+         │                                │
+    ┌────┴────┐                           │
+    ▼         ▼                           ▼
+  Gemini     10 Tools ◄────────────────────
 (3.1 Flash   (Pandas)
  Lite)
 ```
+
+Both paths share the exact same `tools.py` — no business logic is
+duplicated between them. The FastAPI path is orchestrated by LangGraph
+(this repo owns the reasoning loop); the MCP path is orchestrated by
+whichever MCP client connects (the client's own LLM owns the reasoning
+loop, this repo only exposes the tools).
 
 ## 📦 Tech Stack
 
@@ -41,7 +47,8 @@ Memory      Memory (JSON / Cosmos DB)
 | **Auth** | JWT (python-jose), Passlib/bcrypt, OAuth2PasswordBearer |
 | **Data Analysis** | Pandas |
 | **Memory** | In-Session (RAM), Persistent (JSON), Cosmos DB (Azure) |
-| **Infrastructure** | Docker |
+| **Infrastructure** | Docker, Azure Container Apps (FastAPI), Google Cloud Run (MCP) |
+| **Tool Protocol** | Model Context Protocol (MCP) — stdio + streamable-http |
 | **CI/CD** | GitHub Actions (tests + Docker build) |
 | **Testing** | Pytest, standalone LangSmith trace script |
 | **Observability** | LangSmith tracing |
@@ -53,7 +60,8 @@ sales-intelligence-agent/
 ├── app/
 │   ├── main.py              # FastAPI - HTTP endpoints + JWT Auth
 │   ├── agent_langgraph.py   # LangGraph agent (state graph, Gemini)
-│   ├── tools.py             # 9 data analysis functions (Pandas)
+│   ├── mcp_server.py        # MCP server: local stdio + remote streamable-http
+│   ├── tools.py             # 10 data analysis functions (Pandas)
 │   ├── memory.py            # InSessionMemory + PersistentMemory (JSON)
 │   ├── cosmos_memory.py     # CosmosMemory (Azure Cosmos DB NoSQL)
 │   └── auth.py              # JWT Authentication
@@ -61,13 +69,14 @@ sales-intelligence-agent/
 │   ├── ventas.csv           # Sales dataset (~15K transactions)
 │   └── memory.json          # Local persistent memory
 ├── tests/
-│   ├── test_tools.py        # Unit tests for the 9 tools
+│   ├── test_tools.py        # Unit tests for the tools
 │   ├── test_api.py          # API integration tests
 │   └── test_memoria.py      # Truncated memory test
 ├── test_langsmith.py        # Standalone smoke test w/ LangSmith tracing (no FastAPI needed)
 ├── .github/workflows/
-│   └── ci-cd.yml            # CI/CD: Tests → Docker Build
-├── Dockerfile
+│   └── ci-cd.yml            # CI/CD: Tests → Docker Build (FastAPI path only)
+├── Dockerfile                # FastAPI image
+├── Dockerfile.mcp            # MCP server image
 ├── requirements.txt
 └── README.md
 ```
@@ -107,7 +116,7 @@ The agent is modeled as a **state graph** with three nodes:
 
 ### Agent Features
 
-- **9 decoupled tools** in `tools.py`: sales by seller, category, region, month, seller by month, product by region, product list, top product, general summary.
+- **10 decoupled tools** in `tools.py`: sales by seller, category, region, month, seller by month, vendor ranking by date range, product by region, product list, top product, general summary.
 - **Full decoupling** between orchestration (LangGraph) and business logic (Pandas). Tools are agnostic to the data source.
 - **Question enrichment** with conversation history context to handle pronouns and implicit references.
 - **History truncation** to the last 10 messages to control token consumption in long conversations.
@@ -137,11 +146,21 @@ All classes share the same public interface (`add_message`, `get_history`, `clea
 
 ## 🔌 MCP Server
 
-An alternative access path to the same 9 analysis tools, via the [Model
+An alternative access path to the same 10 analysis tools, via the [Model
 Context Protocol](https://modelcontextprotocol.io) — usable from any MCP
-client (Claude Desktop, Claude.ai, Cursor, etc.), no HTTP client or LangGraph
-knowledge required. `app/mcp_server.py` wraps `app/tools.py` directly; the
-business logic is not duplicated between the FastAPI and MCP paths.
+client, no HTTP client or LangGraph knowledge required. `app/mcp_server.py`
+wraps `app/tools.py` directly; the business logic is not duplicated between
+the FastAPI and MCP paths.
+
+### Client compatibility
+
+| Client | Remote HTTP support | Notes |
+|---|---|---|
+| Cursor | Native | Paste URL + header, done |
+| VS Code + Cline | Native | Same as above |
+| Windsurf | Native | Same as above |
+| Claude Desktop | stdio only | See below |
+| Claude.ai (web) | Via custom connector | Requires OAuth or a beta "static header" feature (early-access only as of Aug 2026) |
 
 ### Local usage (stdio)
 
@@ -180,6 +199,7 @@ On macOS/Linux, `command` is typically `<path-to-venv>/bin/python`.
 export MCP_TRANSPORT=streamable-http
 export PORT=8080
 export MCP_AUTH_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+export ALLOWED_HOST=<your-deployed-host>  # e.g. my-service-xxxxx.a.run.app
 python -m app.mcp_server
 ```
 
@@ -187,10 +207,66 @@ Requires `Authorization: Bearer <MCP_AUTH_TOKEN>` on every request — the
 server refuses to start without `MCP_AUTH_TOKEN` set, to avoid accidentally
 exposing it unauthenticated.
 
+`ALLOWED_HOST` is required for any deployment behind a real hostname (not
+`localhost`): the MCP SDK's DNS-rebinding protection rejects the `Host`
+header of any hostname not explicitly allowlisted, returning
+`421 Invalid Host header` otherwise.
+
+### Deployed instance (Google Cloud Run)
+
+The remote server is deployed on **Google Cloud Run**, built from
+`Dockerfile.mcp` and pushed to **Artifact Registry**
+(`us-central1-docker.pkg.dev`) — not the deprecated `gcr.io` Container
+Registry, which stopped accepting pushes in 2026. `MCP_AUTH_TOKEN` is
+stored in **Secret Manager**, never as a plaintext env var.
+
+```bash
+gcloud builds submit --config cloudbuild.yaml .
+
+gcloud run deploy sales-intelligence-mcp \
+  --image us-central1-docker.pkg.dev/<project-id>/sales-mcp-repo/sales-intelligence-mcp \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-secrets=MCP_AUTH_TOKEN=mcp-auth-token:latest \
+  --set-env-vars=ALLOWED_HOST=<your-service>.run.app
+```
+
+`--allow-unauthenticated` controls platform-level (Cloud Run IAM) access,
+not application-level auth — every request still needs a valid bearer
+token to reach any tool, enforced by `mcp_server.py` itself.
+
+### Connecting Claude Desktop to the remote server
+
+Claude Desktop's `claude_desktop_config.json` only understands local
+(`stdio`) processes — it cannot be pointed at a remote `url` directly, and
+its built-in "Add custom connector" flow requires OAuth (bearer/API-key
+auth is a beta feature with limited access as of Aug 2026). The workaround
+is a small local stdio↔HTTP bridge script that forwards messages to the
+remote server, carrying the `Authorization` header and the MCP session ID:
+
+```json
+{
+  "mcpServers": {
+    "sales-intelligence-agent": {
+      "command": "<path-to-python>",
+      "args": ["<path-to-bridge-script>"],
+      "env": {
+        "MCP_AUTH_TOKEN": "<your-token>",
+        "MCP_REMOTE_URL": "https://<your-service>.run.app/mcp"
+      }
+    }
+  }
+}
+```
+
+For any other MCP client with native remote support (Cursor, Windsurf, VS
+Code+Cline), no bridge is needed — configure `url` + `headers` directly.
+
 ## 🧪 Tests
 
 ```bash
-# Unit tests for tools (26 tests)
+# Unit tests for the original 9 tools (26 tests) — does not yet cover
+# vendedor_ranking_periodo (10th tool, added alongside the MCP server)
 pytest tests/test_tools.py -v
 
 # API integration tests (calls the real Gemini API — requires GOOGLE_API_KEY)
