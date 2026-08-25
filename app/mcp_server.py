@@ -23,6 +23,9 @@ Uso remoto (HTTP en el puerto 8080, el que espera Cloud Run):
 import os
 import json
 import secrets
+import time
+import asyncio
+from collections import defaultdict
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
@@ -154,15 +157,32 @@ def tool_resumen_general() -> str:
 # por medio). El bearer token solo tiene sentido cuando el servidor escucha
 # en un puerto abierto a internet, como va a pasar en Cloud Run.
 
-class BearerAuthMiddleware(BaseHTTPMiddleware):
-    """Exige el header 'Authorization: Bearer <token>' en cada request.
-    Usa secrets.compare_digest para comparar el token de forma segura contra
-    ataques de timing (comparar strings con '==' filtra cuántos caracteres
-    coinciden por el tiempo que tarda la comparación)."""
+class AuthAndRateLimitMiddleware(BaseHTTPMiddleware):
+    """Exige el header 'Authorization: Bearer <token>' en cada request, y
+    aplica rate limiting por token (60 requests/minuto por default).
 
-    def __init__(self, app, expected_token: str):
+    Nota de diseño importante sobre por qué esto va en un solo middleware
+    y no en dos separados: el orden de ejecución entre varios middlewares
+    de Starlette depende del orden en que se agregan (el último agregado
+    se ejecuta primero), lo cual es fácil de mezclar mal. Combinarlos acá
+    evita esa fuente de bugs -- primero valida el token, y solo si es
+    válido cuenta ese request contra el límite de ESE token específico
+    (un token inválido no debería "gastar" cupo de nadie).
+
+    Limitación conocida: el contador vive en memoria del proceso. Si Cloud
+    Run escala a más de una instancia, cada una lleva su propio conteo por
+    separado -- el límite real termina siendo N x 60/min en vez de 60/min
+    total, donde N es la cantidad de instancias activas. Para un límite
+    estricto de verdad en múltiples instancias, el siguiente paso sería
+    mover el contador a Memorystore (Redis) en vez de memoria local."""
+
+    def __init__(self, app, expected_token: str, requests_per_minute: int = 60):
         super().__init__(app)
         self.expected_header = f"Bearer {expected_token}"
+        self.limit = requests_per_minute
+        self.window_seconds = 60
+        self._requests_by_token: dict[str, list[float]] = defaultdict(list)
+        self._lock = asyncio.Lock()
 
     async def dispatch(self, request, call_next):
         auth_header = request.headers.get("authorization", "")
@@ -171,6 +191,32 @@ class BearerAuthMiddleware(BaseHTTPMiddleware):
                 {"error": "unauthorized", "detail": "Falta o es inválido el header Authorization: Bearer <token>"},
                 status_code=401,
             )
+
+        # Usamos el propio token como clave -- hoy hay un solo token, pero
+        # esto ya queda preparado para el día que existan varios (uno por
+        # cliente), sin tener que rediseñar el rate limiting.
+        token_key = auth_header
+        now = time.monotonic()
+
+        async with self._lock:
+            timestamps = self._requests_by_token[token_key]
+            # Descartar timestamps fuera de la ventana de 60s
+            cutoff = now - self.window_seconds
+            timestamps[:] = [t for t in timestamps if t > cutoff]
+
+            if len(timestamps) >= self.limit:
+                retry_after = int(self.window_seconds - (now - timestamps[0])) + 1
+                return JSONResponse(
+                    {
+                        "error": "rate_limited",
+                        "detail": f"Límite de {self.limit} requests/minuto excedido. Reintentar en {retry_after}s.",
+                    },
+                    status_code=429,
+                    headers={"Retry-After": str(retry_after)},
+                )
+
+            timestamps.append(now)
+
         return await call_next(request)
 
 
@@ -197,7 +243,12 @@ if __name__ == "__main__":
             )
 
         http_app = mcp.streamable_http_app()
-        http_app.add_middleware(BearerAuthMiddleware, expected_token=auth_token)
+        requests_per_minute = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
+        http_app.add_middleware(
+            AuthAndRateLimitMiddleware,
+            expected_token=auth_token,
+            requests_per_minute=requests_per_minute,
+        )
 
         port = int(os.getenv("PORT", "8080"))
         uvicorn.run(http_app, host="0.0.0.0", port=port)
