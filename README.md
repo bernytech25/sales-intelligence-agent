@@ -265,8 +265,7 @@ Code+Cline), no bridge is needed — configure `url` + `headers` directly.
 ## 🧪 Tests
 
 ```bash
-# Unit tests for the original 9 tools (26 tests) — does not yet cover
-# vendedor_ranking_periodo (10th tool, added alongside the MCP server)
+# Unit tests for all 10 tools (31 tests)
 pytest tests/test_tools.py -v
 
 # API integration tests (calls the real Gemini API — requires GOOGLE_API_KEY)
@@ -335,5 +334,5 @@ open http://localhost:8000/docs
 
 ---
 
-**Author:** Bernardo Mantilla Afanador
+**Author:** Bernardo Mantilla
 **License:** MIT

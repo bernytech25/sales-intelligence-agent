@@ -16,6 +16,7 @@ from app.tools import (
     ventas_por_region,
     ventas_por_mes,
     ventas_vendedor_por_mes,
+    vendedor_ranking_periodo,
     ventas_producto_por_region,
     lista_productos,
     producto_mas_vendido,
@@ -96,6 +97,37 @@ def test_ventas_vendedor_por_mes_case_insensitive():
     vendedor = vendedores[0]
     resultado = ventas_vendedor_por_mes(vendedor.upper())
     assert "ventas_por_mes" in resultado
+
+
+# ── vendedor_ranking_periodo ──────────────────────────────────────────────────
+
+def test_vendedor_ranking_periodo_estructura():
+    resultado = vendedor_ranking_periodo("2024-01", "2024-12")
+    campos = ["periodo", "orden", "vendedor", "total_vendido", "ranking_completo"]
+    for campo in campos:
+        assert campo in resultado, f"Falta campo: {campo}"
+
+def test_vendedor_ranking_periodo_orden_desc_es_el_mayor():
+    resultado = vendedor_ranking_periodo("2024-01", "2024-12", orden="desc")
+    valores = list(resultado["ranking_completo"].values())
+    assert valores == sorted(valores, reverse=True)
+    assert resultado["total_vendido"] == max(valores)
+
+def test_vendedor_ranking_periodo_orden_asc_es_el_menor():
+    resultado = vendedor_ranking_periodo("2024-01", "2024-12", orden="asc")
+    valores = list(resultado["ranking_completo"].values())
+    assert valores == sorted(valores)
+    assert resultado["total_vendido"] == min(valores)
+
+def test_vendedor_ranking_periodo_rango_sin_datos():
+    resultado = vendedor_ranking_periodo("2030-01", "2030-12")
+    assert "error" in resultado
+    assert "meses_disponibles" in resultado
+
+def test_vendedor_ranking_periodo_filtra_por_rango():
+    completo = vendedor_ranking_periodo("2024-01", "2024-12")
+    parcial = vendedor_ranking_periodo("2024-01", "2024-03")
+    assert sum(parcial["ranking_completo"].values()) <= sum(completo["ranking_completo"].values())
 
 
 # ── ventas_producto_por_region ────────────────────────────────────────────────

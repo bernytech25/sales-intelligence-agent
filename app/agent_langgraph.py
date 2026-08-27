@@ -19,6 +19,7 @@ from app.tools import (
     ventas_por_region,
     ventas_por_mes,
     ventas_vendedor_por_mes,
+    vendedor_ranking_periodo,
     ventas_producto_por_region,
     lista_productos,
     producto_mas_vendido,
@@ -60,6 +61,15 @@ def tool_ventas_vendedor_por_mes(vendedor: str) -> str:
     return json.dumps(ventas_vendedor_por_mes(vendedor), ensure_ascii=False)
 
 @tool
+def tool_vendedor_ranking_periodo(mes_desde: str, mes_hasta: str, orden: str = "desc") -> str:
+    """Rankea vendedores por ventas totales en un rango de meses (formato YYYY-MM, ej.
+    mes_desde='2024-10' mes_hasta='2024-12' para el último trimestre). orden='desc' da el
+    que más vendió primero; orden='asc' da el que menos vendió primero. Usar para
+    '¿quién vendió más/menos en los últimos N meses?' en una sola llamada, en vez de
+    consultar vendedor por vendedor o mes por mes."""
+    return json.dumps(vendedor_ranking_periodo(mes_desde, mes_hasta, orden), ensure_ascii=False)
+
+@tool
 def tool_ventas_por_producto(producto: str) -> str:
     """Obtiene en qué regiones se vende un producto específico con unidades y pesos por región. Usar cuando pregunten dónde se vende un producto."""
     return json.dumps(ventas_producto_por_region(producto), ensure_ascii=False)
@@ -85,6 +95,7 @@ TOOLS = [
     tool_ventas_por_region,
     tool_ventas_por_mes,
     tool_ventas_vendedor_por_mes,
+    tool_vendedor_ranking_periodo,
     tool_ventas_por_producto,
     tool_lista_productos,
     tool_producto_mas_vendido,
@@ -104,6 +115,8 @@ SYSTEM_PROMPT = (
     "Si preguntan qué productos vende la tienda o cuántos productos hay, usa tool_lista_productos. "
     "Si preguntan en qué región se vende un producto, usa tool_ventas_por_producto. "
     "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
+    "Si preguntan quién vendió más o menos en un rango de meses (ej. 'último trimestre'), "
+    "usa tool_vendedor_ranking_periodo en una sola llamada, en vez de consultar mes por mes. "
     "Responde en español o ingles dependiendo el idioma de la pregunta con insights accionables para el negocio."
 )
 
