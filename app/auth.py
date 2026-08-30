@@ -27,8 +27,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Configuración ─────────────────────────────────────────────────────────────
+# SECRET_KEY no tiene fallback: si falta, la app no arranca. Un default como
+# "dev-secret-key-change-in-production" queda visible en el repo público de
+# GitHub -- si alguien lo despliega sin setear la variable, cualquiera puede
+# forjar tokens válidos con esa clave conocida.
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "Falta la variable de entorno JWT_SECRET_KEY. La API no puede arrancar "
+        "sin una clave secreta configurada (evita que quede firmando tokens "
+        "con una clave default conocida)."
+    )
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 

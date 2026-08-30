@@ -44,12 +44,13 @@ from app.tools import (
     producto_mas_vendido,
     resumen_general,
 )
+from app.prompts import MCP_SERVER_INSTRUCTIONS
 
 # ── Instancia del servidor ───────────────────────────────────────────────────
 # El nombre es lo que ve el usuario en el cliente MCP (ej. lista de conectores
-# en Claude Desktop), y las instrucciones cumplen el mismo rol que el
-# SYSTEM_PROMPT de agent_langgraph.py: orientan al LLM sobre cuándo y cómo
-# usar estas tools.
+# en Claude Desktop). Las instrucciones vienen de app/prompts.py, que también
+# usa agent_langgraph.py -- así la regla de resolución de pronombres no se
+# desincroniza entre los dos consumidores.
 def _allowed_hosts() -> list[str]:
     """Hosts permitidos para el header Host (protección DNS rebinding del SDK).
     El SDK exige coincidencia EXACTA (no wildcards de subdominio tipo *.run.app),
@@ -64,13 +65,7 @@ def _allowed_hosts() -> list[str]:
 
 mcp = FastMCP(
     name="sales-intelligence-agent",
-    instructions=(
-        "Herramientas de análisis sobre un dataset de ventas (~15K transacciones, "
-        "$16M+ en ingresos). Usalas para responder preguntas sobre rendimiento de "
-        "vendedores, categorías, regiones y productos. Si la pregunta usa pronombres "
-        "(el, ella, ese producto), identificá primero a qué vendedor o producto se "
-        "refiere antes de llamar a la tool correspondiente."
-    ),
+    instructions=MCP_SERVER_INSTRUCTIONS,
     transport_security=TransportSecuritySettings(allowed_hosts=_allowed_hosts()),
 )
 

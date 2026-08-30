@@ -8,7 +8,7 @@ from typing import TypedDict, Annotated
 
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
@@ -25,6 +25,7 @@ from app.tools import (
     producto_mas_vendido,
     resumen_general,
 )
+from app.prompts import SALES_AGENT_SYSTEM_PROMPT
 
 load_dotenv()
 
@@ -106,20 +107,6 @@ TOOLS_MAP = {t.name: t for t in TOOLS}
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = (
-    "Sos un asistente experto en análisis de ventas. "
-    "REGLA CRITICA: NUNCA digas que no tenes informacion si existe una tool que puede obtenerla. "
-    "Siempre usa las tools para responder preguntas sobre datos. "
-    "Si la pregunta usa pronombres como el, ella, ese, ese producto, revisa el historial "
-    "e identifica a qué persona o producto se refiere, luego usa la tool con ese nombre. "
-    "Si preguntan qué productos vende la tienda o cuántos productos hay, usa tool_lista_productos. "
-    "Si preguntan en qué región se vende un producto, usa tool_ventas_por_producto. "
-    "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
-    "Si preguntan quién vendió más o menos en un rango de meses (ej. 'último trimestre'), "
-    "usa tool_vendedor_ranking_periodo en una sola llamada, en vez de consultar mes por mes. "
-    "Responde en español o ingles dependiendo el idioma de la pregunta con insights accionables para el negocio."
-)
-
 def get_llm():
     llm = ChatGoogleGenerativeAI(
         model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
@@ -132,7 +119,7 @@ def get_llm():
 
 def node_llm(state: AgentState) -> AgentState:
     llm = get_llm()
-    messages = [HumanMessage(content=f"[INSTRUCCION DE SISTEMA]: {SYSTEM_PROMPT}")] + state["messages"]
+    messages = [SystemMessage(content=SALES_AGENT_SYSTEM_PROMPT)] + state["messages"]
     response = llm.invoke(messages)
     return {"messages": [response]}
 
