@@ -19,6 +19,16 @@
       "role": "assistant",
       "content": "El vendedor que más vendió durante este trimestre (octubre a diciembre de 2024) es **Leandro Rossi**, con un total de **$131,523**.\n\n**Insight para el negocio:**\nLeandro Rossi se posiciona como el líder indiscutible del equipo comercial en este periodo. Dado que su volumen de ventas supera significativamente al promedio, sugiero realizar una breve entrevista de \"mejores prácticas\" con él para entender qué estrategias está utilizando (ya sea prospección, cierre de ventas o gestión de cuentas clave). Esta información es valiosa para capacitar al resto del equipo y estandarizar procesos que permitan mejorar el rendimiento general de la tienda en el próximo trimestre.",
       "timestamp": "2026-08-27T16:37:11.166508"
+    },
+    {
+      "role": "user",
+      "content": "¿Quién vendió más este trimestre?",
+      "timestamp": "2026-08-30T15:57:14.380702"
+    },
+    {
+      "role": "assistant",
+      "content": "El vendedor que más vendió durante este trimestre (octubre a diciembre de 2024) es **Leandro Rossi**, con un total de **$131,523**.\n\n**Insight para el negocio:**\nLeandro Rossi se posiciona como el líder del equipo comercial en este periodo. Dado que su volumen de ventas supera significativamente al promedio, sugiero realizar una breve entrevista de \"mejores prácticas\" con él para entender qué estrategias está utilizando (ya sea prospección, cierre de ventas o gestión de cuentas clave). Esta información es valiosa para capacitar al resto del equipo y estandarizar procesos que permitan mejorar el rendimiento general de la tienda en el próximo trimestre.",
+      "timestamp": "2026-08-30T15:57:14.403757"
     }
   ]
 }
