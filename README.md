@@ -18,35 +18,6 @@
 > Production-ready conversational sales analysis agent. Enables natural language queries on enterprise sales datasets, eliminating the dependency on SQL or BI dashboards for non-technical users.
 
 ## 🏗️ Architecture
-graph LR
-    subgraph "Acceso Dual"
-        A[FastAPI<br/>HTTP + JWT]
-        B[MCP Server<br/>stdio + HTTP]
-    end
-    
-    subgraph "Backend Compartido"
-        C[LangGraph<br/>State Graph]
-        D[tools.py<br/>10 Pandas functions]
-        B --> D
-    end
-    
-    A --> C
-    C --> D
-    
-    subgraph "LLM & Tools"
-        C --> E[Gemini 3.1<br/>Flash Lite]
-        D --> F[(sales.csv)]
-    end
-    
-    E --> G{Tool calls?}
-    G -->|Yes| D
-    G -->|No| H[Response]
-    D --> E
-    
-    style A fill:#009688,color:#fff
-    style B fill:#9C27B0,color:#fff
-    style D fill:#E74C3C,color:#fff
-
 
 User (HTTP)                          User (MCP client:
   │ POST /chat                        Claude Desktop, Cursor, etc.)
