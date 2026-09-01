@@ -29,6 +29,36 @@
       "role": "assistant",
       "content": "El vendedor que más vendió durante este trimestre (octubre a diciembre de 2024) es **Leandro Rossi**, con un total de **$131,523**.\n\n**Insight para el negocio:**\nLeandro Rossi se posiciona como el líder del equipo comercial en este periodo. Dado que su volumen de ventas supera significativamente al promedio, sugiero realizar una breve entrevista de \"mejores prácticas\" con él para entender qué estrategias está utilizando (ya sea prospección, cierre de ventas o gestión de cuentas clave). Esta información es valiosa para capacitar al resto del equipo y estandarizar procesos que permitan mejorar el rendimiento general de la tienda en el próximo trimestre.",
       "timestamp": "2026-08-30T15:57:14.403757"
+    },
+    {
+      "role": "user",
+      "content": "¿Quién vendió más en noviembre y diciembre?",
+      "timestamp": "2026-08-31T09:29:34.445208"
+    },
+    {
+      "role": "assistant",
+      "content": "El vendedor que más vendió durante noviembre y diciembre es **Leandro Rossi**, con un total de **$81,374**.\n\n**Insight para el negocio:**\nLeandro mantiene un liderazgo consistente en el cierre del año. Es interesante notar que, al observar este periodo de dos meses, otros vendedores como **Verónica Marín ($80,785)** y **Marta Benítez ($79,092)** también han tenido un desempeño sobresaliente, quedando muy cerca de la cifra de Leandro. \n\nEsto sugiere que, en el último bimestre, hubo una competencia muy reñida en la parte alta de la tabla. Sería una excelente oportunidad para implementar un incentivo o bono por desempeño para el \"Top 3\" de vendedores, lo cual podría motivar a este grupo de alto rendimiento a mantener o superar sus números en el inicio del próximo año.",
+      "timestamp": "2026-08-31T09:29:34.468725"
+    },
+    {
+      "role": "user",
+      "content": "¿Quién vendió más en enero y mayo?",
+      "timestamp": "2026-08-31T09:31:27.112866"
+    },
+    {
+      "role": "assistant",
+      "content": "El vendedor que más vendió en el periodo de enero a mayo es **Marta Benítez**, con un total de **$174,347**.\n\n**Insight para el negocio:**\nMarta Benítez ha demostrado una consistencia notable durante estos cinco meses, liderando el ranking general. Dado que el margen entre los primeros puestos es competitivo (seguida de cerca por Lucía Espinoza con $172,226 y Laura Fernández con $171,341), este grupo representa el \"motor\" de ventas de la empresa. \n\nRecomiendo analizar si estas vendedoras están concentradas en regiones o categorías de productos específicas. Si su éxito se debe a un dominio de un nicho particular, podríamos replicar sus estrategias en otras áreas geográficas o con otros productos que tengan menor rotación, aprovechando el *know-how* de este grupo de alto rendimiento.",
+      "timestamp": "2026-08-31T09:31:27.135574"
+    },
+    {
+      "role": "user",
+      "content": "¿Quién vendió más en mayo y octubre?",
+      "timestamp": "2026-08-31T16:31:13.240760"
+    },
+    {
+      "role": "assistant",
+      "content": "El vendedor que más vendió en el periodo de mayo a octubre es **Laura Fernández**, con un total de **$215,031**.\n\n**Insight para el negocio:**\nLaura Fernández se destaca claramente como la vendedora con mayor volumen en este semestre extendido. Al analizar un periodo tan amplio, su liderazgo sugiere una capacidad de venta sostenida y una gestión de clientes muy efectiva. \n\nDado que la diferencia con el segundo puesto (Sofía Molina con $198,086) es considerable, sería muy valioso realizar una auditoría de sus procesos de venta. Si Laura está utilizando herramientas de CRM, técnicas de seguimiento específicas o tiene un enfoque particular en la fidelización de clientes, documentar estos procesos permitiría crear un \"manual de mejores prácticas\" para el resto del equipo, ayudando a elevar el rendimiento promedio de los vendedores que se encuentran en la mitad inferior de la tabla.",
+      "timestamp": "2026-08-31T16:31:13.265189"
     }
   ]
 }
