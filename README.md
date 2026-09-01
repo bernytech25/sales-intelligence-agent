@@ -1,9 +1,3 @@
-# Sales Intelligence Agent
-
-<div align="center">
-
-# Sales Intelligence Agent
-
 <div align="center">
 
 # Sales Intelligence Agent
