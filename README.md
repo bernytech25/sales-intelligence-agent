@@ -1,17 +1,27 @@
+# Sales Intelligence Agent
+
 <div align="center">
 
 # Sales Intelligence Agent
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agent-2C3E50?logo=langchain)](https://langchain-ai.github.io/langgraph/)
-[![MCP](https://img.shields.io/badge/MCP-Protocol-purple?logo=modelcontextprotocol)](https://modelcontextprotocol.io/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![CI/CD](https://github.com/bernytech25/sales-intelligence-agent/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/bernytech25/sales-intelligence-agent/actions)
-[![Last Commit](https://img.shields.io/github/last-commit/bernytech25/sales-intelligence-agent?color=orange)](https://github.com/bernytech25/sales-intelligence-agent/commits/main)
+<div align="center">
 
-**Agente conversacional de análisis de ventas con LangGraph + MCP**
+# Sales Intelligence Agent
+
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agent-2C3E50?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Google Cloud](https://img.shields.io/badge/Google_Cloud-Run_&_Artifact_Registry-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/)
+[![Google Gemini](https://img.shields.io/badge/LLM-Gemini_3.1_Flash-8E75B2?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+[![Azure](https://img.shields.io/badge/Azure-Cosmos_DB-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
+[![MCP](https://img.shields.io/badge/MCP-Protocol-purple?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Stars](https://img.shields.io/github/stars/bernytech25/sales-intelligence-agent?style=social)](https://github.com/bernytech25/sales-intelligence-agent/stargazers)
+
+**Agente conversacional de análisis de ventas con LangGraph + Model Context Protocol (MCP)**
+
+</div>
 
 </div>
 
@@ -19,6 +29,7 @@
 
 ## 🏗️ Architecture
 
+```
 User (HTTP)                          User (MCP client:
   │ POST /chat                        Claude Desktop, Cursor, etc.)
   ▼                                     │
@@ -279,7 +290,8 @@ Code+Cline), no bridge is needed — configure `url` + `headers` directly.
 ## 🧪 Tests
 
 ```bash
-# Unit tests for all 10 tools (31 tests)
+# Unit tests for the original 9 tools (26 tests) — does not yet cover
+# vendedor_ranking_periodo (10th tool, added alongside the MCP server)
 pytest tests/test_tools.py -v
 
 # API integration tests (calls the real Gemini API — requires GOOGLE_API_KEY)
@@ -348,5 +360,5 @@ open http://localhost:8000/docs
 
 ---
 
-**Author:** Bernardo Mantilla
+**Author:** Bernardo Mantilla Afanador
 **License:** MIT
