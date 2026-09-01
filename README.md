@@ -13,7 +13,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Stars](https://img.shields.io/github/stars/bernytech25/sales-intelligence-agent?style=social)](https://github.com/bernytech25/sales-intelligence-agent/stargazers)
 
-**Agente conversacional de análisis de ventas con LangGraph + Model Context Protocol (MCP)**
+**Conversational sales analysis agent with LangGraph + Model Context Protocol (MCP)**
 
 </div>
 
