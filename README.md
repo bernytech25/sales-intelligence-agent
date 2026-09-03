@@ -7,7 +7,7 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-Agent-2C3E50?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Run_&_Artifact_Registry-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/)
 [![Google Gemini](https://img.shields.io/badge/LLM-Gemini_3.1_Flash-8E75B2?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
-[![Azure](https://img.shields.io/badge/Azure-Cosmos_DB-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
+[![Azure](https://img.shields.io/badge/Azure-Container_Apps-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -35,7 +35,8 @@ User (HTTP)                          User (MCP client:
     ┌────┴────┐                           │
     ▼         ▼                           │
 In-Session  Persistent                    │
-Memory      Memory (JSON / Cosmos DB)     │
+Memory      Memory (JSON, migrating      │
+            to Firestore/Redis)          │
     │                                     │
     ▼                                     │
 ┌─────────────────┐                       │
@@ -65,7 +66,7 @@ loop, this repo only exposes the tools).
 | **API** | FastAPI, Uvicorn, Pydantic |
 | **Auth** | JWT (python-jose), Passlib/bcrypt, OAuth2PasswordBearer |
 | **Data Analysis** | Pandas |
-| **Memory** | In-Session (RAM), Persistent (JSON), Cosmos DB (Azure) |
+| **Memory** | In-Session (RAM), Persistent (JSON, current) — migrating to Firestore/Redis on GCP |
 | **Infrastructure** | Docker, Azure Container Apps (FastAPI), Google Cloud Run (MCP) |
 | **Tool Protocol** | Model Context Protocol (MCP) — stdio + streamable-http |
 | **CI/CD** | GitHub Actions (tests + Docker build) |
@@ -82,7 +83,7 @@ sales-intelligence-agent/
 │   ├── mcp_server.py        # MCP server: local stdio + remote streamable-http
 │   ├── tools.py             # 10 data analysis functions (Pandas)
 │   ├── memory.py            # InSessionMemory + PersistentMemory (JSON)
-│   ├── cosmos_memory.py     # CosmosMemory (Azure Cosmos DB NoSQL)
+│   ├── cosmos_memory.py     # CosmosMemory (Azure Cosmos DB NoSQL) — deprecated, disconnected
 │   └── auth.py              # JWT Authentication
 ├── data/
 │   ├── ventas.csv           # Sales dataset (~15K transactions)
@@ -140,28 +141,28 @@ The agent is modeled as a **state graph** with three nodes:
 - **Question enrichment** with conversation history context to handle pronouns and implicit references.
 - **History truncation** to the last 10 messages to control token consumption in long conversations.
 
-## 💾 Memory (3 Backends)
+## 💾 Memory
 
-| Backend | Persistence | Scalable | Use Case |
+| Backend | Persistence | Scalable | Status |
 |---|---|---|---|
-| `InSessionMemory` | RAM (lost on restart) | No | Development / demo |
-| `PersistentMemory` | Local JSON (`data/memory.json`) | No | Single-instance |
-| `CosmosMemory` | Azure Cosmos DB NoSQL | **Yes** | Production multi-replica |
+| `InSessionMemory` | RAM (lost on restart) | No | Active — development / demo |
+| `PersistentMemory` | Local JSON (`data/memory.json`) | No | Active — current FastAPI default |
+| `CosmosMemory` | Azure Cosmos DB NoSQL | Yes | Deprecated — code present but disconnected in `memory.py` (`MEMORY_BACKEND=cosmos` no longer wired), kept from when the FastAPI path was deployed on Azure |
+| Firestore / Redis | Google Cloud | Yes | **In progress** — migrating persistent memory to GCP-native storage now that both the API and MCP server run on Google Cloud, to replace the local-JSON backend with something horizontally scalable |
 
 Backend selection via environment variable:
 ```bash
-MEMORY_BACKEND=json    # default
-MEMORY_BACKEND=cosmos  # requires COSMOS_ENDPOINT, COSMOS_KEY
+MEMORY_BACKEND=json    # default, current FastAPI behavior
 ```
 
-All classes share the same public interface (`add_message`, `get_history`, `clear`), allowing backend swaps without modifying `main.py`.
+All classes share the same public interface (`add_message`, `get_history`, `clear`), so swapping in a Firestore- or Redis-backed implementation won't require changes to `main.py`.
 
 ## 🔐 JWT Authentication
 
 - Tokens signed with `HS256`, configurable expiration (default 60 min).
 - Passwords hashed with bcrypt.
 - OAuth2 Password Bearer scheme.
-- In production: migrate `USERS_DB` to Cosmos DB or SQL.
+- In production: migrate `USERS_DB` to Firestore/Redis or SQL (see Memory section — same GCP migration in progress).
 
 ## 🔌 MCP Server
 
@@ -268,7 +269,7 @@ remote server, carrying the `Authorization` header and the MCP session ID:
   "mcpServers": {
     "sales-intelligence-agent": {
       "command": "<path-to-python>",
-      "args": ["<path-to-bridge-script>"],
+      "args": ["<path-to-project-root>/claude-bridge.py"],
       "env": {
         "MCP_AUTH_TOKEN": "<your-token>",
         "MCP_REMOTE_URL": "https://<your-service>.run.app/mcp"
@@ -284,11 +285,10 @@ Code+Cline), no bridge is needed — configure `url` + `headers` directly.
 ## 🧪 Tests
 
 ```bash
-# Unit tests for the original 9 tools (26 tests) — does not yet cover
-# vendedor_ranking_periodo (10th tool, added alongside the MCP server)
+# Unit tests for all 10 tools, including vendedor_ranking_periodo (31 tests)
 pytest tests/test_tools.py -v
 
-# API integration tests (calls the real Gemini API — requires GOOGLE_API_KEY)
+# API integration tests (calls the real Gemini API — requires GOOGLE_API_KEY) (11 tests)
 pytest tests/test_api.py -v
 
 # Truncated memory test
@@ -337,11 +337,7 @@ open http://localhost:8000/docs
 | `GEMINI_MODEL` | Gemini model | `gemini-3.1-flash-lite` |
 | `JWT_SECRET_KEY` | Secret key for JWT signing | `dev-secret-key-change-in-production` |
 | `JWT_EXPIRE_MINUTES` | Token expiration in minutes | `60` |
-| `MEMORY_BACKEND` | Memory backend (`json` / `cosmos`) | `json` |
-| `COSMOS_ENDPOINT` | Azure Cosmos DB endpoint | — |
-| `COSMOS_KEY` | Azure Cosmos DB key | — |
-| `COSMOS_DATABASE` | Database name | `sales-agent-db` |
-| `COSMOS_CONTAINER` | Container name | `memory` |
+| `MEMORY_BACKEND` | Memory backend (currently only `json` is wired) | `json` |
 | `LANGCHAIN_TRACING_V2` | Enable LangSmith tracing | `false` |
 | `LANGCHAIN_API_KEY` | LangSmith API key | — |
 | `LANGCHAIN_PROJECT` | LangSmith project name | — |
@@ -351,8 +347,9 @@ open http://localhost:8000/docs
 - History truncation to 10 messages keeps token consumption stable at ~4,000-6,000 tokens per conversation.
 - Docker healthcheck verifies the service responds before marking the container as healthy.
 - Latency per request varies (observed ~5-15s) depending on the number of LLM round-trips the agent needs (each tool call adds one) and on Gemini's own response-time variability.
+- `benchmark.py` is a historical script used to compare this repo's LangGraph/Groq variant against a Semantic Kernel + Azure OpenAI variant that lives in a separate repository. It's not part of the current CI/CD pipeline and doesn't reflect the current Gemini-based LLM.
 
 ---
 
-**Author:** Bernardo Mantilla Afanador
+**Author:** Bernardo Mantilla 
 **License:** MIT
