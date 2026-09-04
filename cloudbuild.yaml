@@ -1,0 +1,50 @@
+substitutions:
+  _REGION: us-central1
+  _REPO: sales-mcp-repo
+  _IMAGE: sales-intelligence-mcp
+  _SERVICE: sales-intelligence-mcp
+
+steps:
+  # 1. Build the MCP server image, tagged with the commit SHA (traceable,
+  #    reproducible) and also with :latest (convenience pointer only —
+  #    never deploy off :latest in a real rollback scenario, deploy off
+  #    the SHA tag so you know exactly what's running).
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.mcp
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest
+      - .
+
+  # 2. Push both tags to Artifact Registry.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}
+
+  # 3. Deploy to Cloud Run, pinned to the SHA tag (not :latest) so this
+  #    build always deploys exactly what it just built and pushed — no
+  #    race with a later build overwriting :latest before this step runs.
+  - name: gcr.io/google-cloud-sdk/slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA
+      - --region=${_REGION}
+      - --allow-unauthenticated
+      - --set-secrets=MCP_AUTH_TOKEN=mcp-auth-token:latest
+      - --set-env-vars=ALLOWED_HOST=${_SERVICE}-$PROJECT_NUMBER.${_REGION}.run.app
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
