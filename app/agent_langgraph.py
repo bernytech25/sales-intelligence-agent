@@ -196,7 +196,10 @@ def _extract_answer(result: dict) -> str:
     return str(content)
 
 
-def run_agent(question: str, history: list[dict] | None = None) -> str:
+def run_agent(question: str, history: list[dict] | None = None, return_trace: bool = False):
+    """Runs the agent. By default returns just the answer string (backward
+    compatible with main.py). Pass return_trace=True to also get back which
+    tools were actually called, for automated tool-selection evaluation."""
     history = history or []
     history = _truncate_history(history)
     enriched = _enrich_question(question, history)
@@ -208,4 +211,13 @@ def run_agent(question: str, history: list[dict] | None = None) -> str:
             messages.append(AIMessage(content=msg["content"]))
     messages.append(HumanMessage(content=enriched))
     result = _agent.invoke({"messages": messages})
-    return _extract_answer(result)
+    answer = _extract_answer(result)
+
+    if not return_trace:
+        return answer
+
+    tools_called = [
+        m.name for m in result["messages"]
+        if isinstance(m, ToolMessage)
+    ]
+    return {"answer": answer, "tools_called": tools_called}

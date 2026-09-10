@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 .env
 archive/
+data/memory.json
 data/memory.jsonl
 langsmith_apikey.txt
 service_principal_azure.json

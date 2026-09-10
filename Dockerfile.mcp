@@ -16,7 +16,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar codigo
 COPY app/ ./app/
-COPY data/ ./data/
+
+# Solo el dataset estatico -- memory.json no aplica aca, el MCP no usa
+# memoria de chat, no tiene sentido empaquetarlo en esta imagen
+COPY data/ventas.csv ./data/ventas.csv
 
 # Usuario no-root por seguridad
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app

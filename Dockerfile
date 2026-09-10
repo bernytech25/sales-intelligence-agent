@@ -3,7 +3,7 @@ FROM python:3.11-slim
 
 # Metadata
 LABEL maintainer="sales-agent"
-LABEL description="Agente de análisis de ventas con LangGraph + Groq + FastAPI"
+LABEL description="Agente de análisis de ventas con LangGraph + Gemini + FastAPI"
 
 # Variables de entorno
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -18,7 +18,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código
 COPY app/ ./app/
-COPY data/ ./data/
+
+# Copiar solo el dataset estático (NO memory.json -- ese es estado de
+# runtime, no se versiona ni se empaqueta en la imagen; cada deploy
+# arranca con memoria persistente vacía, no con sesiones viejas adentro)
+COPY data/ventas.csv ./data/ventas.csv
 
 # Crear carpeta de datos si no existe
 RUN mkdir -p ./data
