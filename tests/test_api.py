@@ -111,3 +111,27 @@ def test_chat_persistent_guarda_historial(auth_headers, mock_agent):
     }, headers=auth_headers)
     response = client.get(f"/memory/{session_id}?persistent=true", headers=auth_headers)
     assert response.json()["total"] >= 2
+
+# ── Chat: manejo de errores (no debe filtrar detalle interno) ────────────────
+
+def test_chat_error_interno_no_filtra_detalle_de_excepcion(auth_headers):
+    """Si run_agent explota, el cliente no debe ver el mensaje crudo de la
+    excepción de Python (podría filtrar rutas, nombres de variables, etc.)."""
+    mensaje_interno_sensible = "KeyError: '/home/user/secretkeys.json' not found"
+    with patch("app.main.run_agent", side_effect=RuntimeError(mensaje_interno_sensible)):
+        response = client.post("/chat", json={
+            "session_id": "test-error-500",
+            "question": "¿Quién vendió más?"
+        }, headers=auth_headers)
+    assert response.status_code == 500
+    assert mensaje_interno_sensible not in response.text
+
+def test_chat_persistent_error_interno_no_filtra_detalle_de_excepcion(auth_headers):
+    mensaje_interno_sensible = "ConnectionError: could not reach internal-db-host:5432"
+    with patch("app.main.run_agent", side_effect=RuntimeError(mensaje_interno_sensible)):
+        response = client.post("/chat/persistent", json={
+            "session_id": "test-error-persistent-500",
+            "question": "¿Quién vendió más?"
+        }, headers=auth_headers)
+    assert response.status_code == 500
+    assert mensaje_interno_sensible not in response.text

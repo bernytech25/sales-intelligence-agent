@@ -13,6 +13,7 @@ Endpoints protegidos (requieren Authorization: Bearer <token>):
   DELETE /memory/{session_id}   → limpiar historial
 """
 
+import logging
 from typing import Annotated
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
@@ -29,6 +30,8 @@ from app.auth import (
     get_current_user,
     ACCESS_TOKEN_EXPIRE_MINUTES,
 )
+
+logger = logging.getLogger("sales_agent")
 
 app = FastAPI(
     title="Sales Agent API",
@@ -109,8 +112,9 @@ def chat(
 
     try:
         answer = run_agent(question=request.question, history=history)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Fallo en run_agent (/chat) - session_id=%s", request.session_id)
+        raise HTTPException(status_code=500, detail="Error interno procesando la pregunta. Intentá de nuevo.")
 
     in_session_memory.add_message(request.session_id, "user", request.question)
     in_session_memory.add_message(request.session_id, "assistant", answer)
@@ -127,7 +131,7 @@ def chat_persistent(
     request: ChatRequest,
     current_user: Annotated[User, Depends(get_current_user)]
 ):
-    """Conversación con memoria persistente (Cosmos DB). Requiere autenticación."""
+    """Conversación con memoria persistente. Requiere autenticación."""
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="La pregunta no puede estar vacía.")
 
@@ -135,8 +139,9 @@ def chat_persistent(
 
     try:
         answer = run_agent(question=request.question, history=history)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Fallo en run_agent (/chat/persistent) - session_id=%s", request.session_id)
+        raise HTTPException(status_code=500, detail="Error interno procesando la pregunta. Intentá de nuevo.")
 
     persistent_memory.add_message(request.session_id, "user", request.question)
     persistent_memory.add_message(request.session_id, "assistant", answer)
