@@ -26,6 +26,9 @@ jobs:
       - name: Run unit tests (tools)
         run: python -m pytest tests/test_tools.py -v
 
+      - name: Run unit tests (memory truncation)
+        run: python -m pytest tests/test_memory_truncation.py -v
+
       - name: Run API integration tests
         env:
           JWT_SECRET_KEY: ci-test-secret-key-not-for-production

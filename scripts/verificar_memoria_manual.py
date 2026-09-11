@@ -1,5 +1,16 @@
 """
-Prueba de memoria truncada del agente de ventas
+Verificación manual de memoria truncada del agente de ventas.
+
+Este NO es un test de pytest -- es un script manual que llama al LLM real
+(gasta cuota de Gemini) y valida a ojo, imprimiendo cada respuesta, en vez
+de con asserts. Por eso vive en scripts/ y no en tests/: nunca lo corre el
+CI ni pytest lo recoge por accidente.
+
+Para la cobertura automática y determinística de la lógica de truncamiento
+en sí (sin llamar al LLM), ver tests/test_memory_truncation.py.
+
+Uso:
+    python scripts/verificar_memoria_manual.py
 """
 
 import sys
