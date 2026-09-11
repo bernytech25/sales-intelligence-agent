@@ -1,17 +1,29 @@
-fastapi>=0.115.0
-uvicorn>=0.34.0
-langchain>=0.3.0
-langchain-core>=1.5.0
-langchain-google-genai>=2.0.0
-langgraph>=0.3.0
-pandas>=2.2.0
-python-dotenv>=1.0.0
-pydantic>=2.13.0
-pytest>=8.3.0
-httpx>=0.27.0
-azure-cosmos>=4.7.0
-python-jose[cryptography]>=3.3.0
+# Versiones fijadas (==), verificadas juntas contra la suite completa de
+# tests (52/52 pasan con esta combinación exacta, en Python 3.11/3.12).
+# Un rango abierto (>=) puede instalar una versión mayor incompatible en
+# un build futuro sin que cambies una sola línea de código -- ya nos pasó
+# una vez con bcrypt, por eso ahora todo queda pineado.
+#
+# azure-cosmos y langchain (paquete general, no langchain-core) no los
+# importa ningún archivo del proyecto actualmente -- azure-cosmos porque
+# Cosmos DB está desconectado (ver README), y langchain porque solo se usa
+# langchain-core y langchain-google-genai directamente. Se dejan pineados
+# por si se retoman, pero son candidatos a eliminar si no se van a usar.
+
+fastapi==0.141.1
+uvicorn==0.52.4
+langchain==1.4.0
+langchain-core==1.6.2
+langchain-google-genai==4.4.0
+langgraph==1.2.11
+pandas==3.0.5
+python-dotenv==1.2.2
+pydantic==2.13.5
+pytest==9.1.1
+httpx==0.28.1
+azure-cosmos==4.7.0
+python-jose[cryptography]==3.5.0
 bcrypt==4.0.1
 passlib==1.7.4
-python-multipart>=0.0.9
+python-multipart==0.0.32
 mcp[cli]==1.29.0
