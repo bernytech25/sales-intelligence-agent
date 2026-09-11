@@ -6,7 +6,7 @@ Endpoints públicos (no requieren token):
   POST /auth/token    → obtener token JWT
 
 Endpoints protegidos (requieren Authorization: Bearer <token>):
-  GET  /ventas/resumen          → resumen general sin agente
+  GET /ventas/resumen          → resumen general sin agente
   POST /chat                    → conversación con memoria in-session
   POST /chat/persistent         → conversación con memoria persistente
   GET  /memory/{session_id}     → ver historial
@@ -14,14 +14,17 @@ Endpoints protegidos (requieren Authorization: Bearer <token>):
 """
 
 import logging
+import os
 from typing import Annotated
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 from app.agent_langgraph import run_agent
 from app.tools import resumen_general
 from app.memory import in_session_memory, persistent_memory
+from app.rate_limit import RateLimitMiddleware
 from app.auth import (
     Token,
     User,
@@ -37,6 +40,27 @@ app = FastAPI(
     title="Sales Agent API",
     description="Agente de análisis de ventas con LangGraph + Gemini + Memoria + JWT Auth",
     version="3.0.0",
+)
+
+
+# El último middleware agregado se ejecuta primero en Starlette. CORS se agrega
+# al final para que también pueda añadir sus headers a respuestas como el 429
+# producido por el rate limiter. Ambos se ejecutan antes de las rutas.
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=int(os.getenv("RATE_LIMIT_PER_MINUTE", "60")),
+)
+
+_cors_allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_allowed_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
