@@ -7,8 +7,7 @@ LABEL description="Agente de análisis de ventas con LangGraph + Gemini + FastAP
 
 # Variables de entorno
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
@@ -27,16 +26,22 @@ COPY data/ventas.csv ./data/ventas.csv
 # Crear carpeta de datos si no existe
 RUN mkdir -p ./data
 
-# Exponer puerto
-EXPOSE 8000
+# Cloud Run inyecta PORT en runtime (default 8080 si no está seteado,
+# útil también para correrlo local con `docker run -p 8080:8080`)
+ENV PORT=8080
+EXPOSE 8080
 
-# Health check
+# Health check: usa $PORT, no un valor fijo, para no quedar desincronizado
+# si Cloud Run cambia el puerto inyectado
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://localhost:{os.environ.get(\"PORT\", \"8080\")}/')" || exit 1
 
 # Usuario no-root por seguridad
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 
-# Comando de inicio
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form (no JSON array) + exec: así ${PORT} se expande en runtime.
+# El array ["uvicorn", ..., "--port", "8000"] anterior NUNCA leía la
+# variable de entorno -- por eso Cloud Run esperaba en 8080 y la app
+# escuchaba en 8000, timeout garantizado.
+CMD exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
