@@ -1,6 +1,7 @@
 #!/bin/bash
 # Script de despliegue en Google Cloud Run con Secret Manager
-# Uso: ./deploy.sh
+# Uso: ./deploy.sh [REPO_NAME]
+# Ejemplo: ./deploy.sh sales-mcp-repo
 
 set -e
 
@@ -8,40 +9,60 @@ set -e
 PROJECT_ID=$(gcloud config get-value core/project)
 REGION="${REGION:-us-central1}"
 SERVICE_NAME="${SERVICE_NAME:-sales-agent}"
-REPO_NAME="${REPO_NAME:-sales-repo}"
+
+# Detectar repositorio automáticamente si no se proporciona
+if [ -n "$1" ]; then
+    REPO_NAME="$1"
+elif [ -n "$REPO_NAME" ]; then
+    echo "📦 Usando REPO_NAME de variable de entorno: $REPO_NAME"
+else
+    # Intentar detectar repositorio existente
+    if gcloud artifacts repositories describe sales-mcp-repo --location=$REGION --project=$PROJECT_ID &>/dev/null; then
+        REPO_NAME="sales-mcp-repo"
+        echo "📦 Repositorio detectado: sales-mcp-repo"
+    elif gcloud artifacts repositories describe ${SERVICE_NAME}-repo --location=$REGION --project=$PROJECT_ID &>/dev/null; then
+        REPO_NAME="${SERVICE_NAME}-repo"
+        echo "📦 Repositorio detectado: ${SERVICE_NAME}-repo"
+    else
+        echo "⚠️ No se encontró un repositorio automático."
+        echo "💡 Usa: ./deploy.sh nombre-de-tu-repo"
+        echo "   O exporta: export REPO_NAME=nombre-de-tu-repo"
+        exit 1
+    fi
+fi
+
 IMAGE_NAME="${IMAGE_NAME:-sales-agent}"
 
 echo "🔍 Proyecto: ${PROJECT_ID}"
 echo "🌍 Región: ${REGION}"
 echo "📦 Servicio: ${SERVICE_NAME}"
+echo "🗄️ Repositorio: ${REPO_NAME}"
 
-# Paso 1: Verificar que los secretos existen, si no crearlos
+# Paso 1: Verificar que los secretos existen
 echo ""
 echo "🔐 Verificando secretos..."
 
 if ! gcloud secrets describe jwt-secret-key --project="${PROJECT_ID}" &>/dev/null; then
-    echo "   Creando secreto jwt-secret-key..."
-    openssl rand -hex 32 | gcloud secrets create jwt-secret-key --data-file=- --project="${PROJECT_ID}"
+    echo "   ❌ El secreto 'jwt-secret-key' no existe."
+    echo "   Crealo con: openssl rand -hex 32 | gcloud secrets create jwt-secret-key --data-file=-"
+    exit 1
 else
-    echo "   ✅ jwt-secret-key ya existe"
+    echo "   ✅ jwt-secret-key existe"
 fi
 
 if ! gcloud secrets describe google-api-key --project="${PROJECT_ID}" &>/dev/null; then
-    echo "   ⚠️  google-api-key no existe. Crealo manualmente:"
-    echo "      echo 'TU_API_KEY' | gcloud secrets create google-api-key --data-file=-"
-    read -p "   ¿Querés crearlo ahora? (y/n): " CREATE_KEY
-    if [[ "$CREATE_KEY" == "y" ]]; then
-        read -p "   Ingresá tu GOOGLE_API_KEY: " API_KEY
-        echo "$API_KEY" | gcloud secrets create google-api-key --data-file=- --project="${PROJECT_ID}"
-    fi
+    echo "   ❌ El secreto 'google-api-key' no existe."
+    echo "   Crealo con: echo 'TU_API_KEY' | gcloud secrets create google-api-key --data-file=-"
+    exit 1
 else
-    echo "   ✅ google-api-key ya existe"
+    echo "   ✅ google-api-key existe"
 fi
 
 # Paso 2: Construir y subir la imagen
 echo ""
 echo "🔨 Construyendo imagen Docker..."
 IMAGE_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest"
+echo "   Imagen: ${IMAGE_URL}"
 gcloud builds submit --tag "${IMAGE_URL}" --project="${PROJECT_ID}"
 
 # Paso 3: Desplegar en Cloud Run
@@ -65,6 +86,3 @@ gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format="va
 echo ""
 echo "📊 Ver logs:"
 echo "   gcloud run services logs read ${SERVICE_NAME} --region ${REGION} --limit 50"
-echo ""
-echo "🔑 Ver configuración de secretos:"
-echo "   gcloud run services describe ${SERVICE_NAME} --region ${REGION} --format='yaml(spec.template.spec.containers[0].env)'"

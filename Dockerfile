@@ -26,6 +26,9 @@ COPY data/ventas.csv ./data/ventas.csv
 # Crear carpeta de datos si no existe
 RUN mkdir -p ./data
 
+# Cloud Run inyecta secretos como variables de entorno automáticamente
+# cuando se usa --set-secrets en el deploy. No hardcodear claves en el Dockerfile.
+
 # Cloud Run inyecta PORT en runtime (default 8080 si no está seteado,
 # útil también para correrlo local con `docker run -p 8080:8080`)
 ENV PORT=8080
