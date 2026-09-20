@@ -117,9 +117,39 @@ uvicorn app.main:app --reload   # then open http://localhost:8000/docs
 | Variable | Purpose | Default |
 |---|---|---|
 | `GOOGLE_API_KEY` | Gemini API key | — |
-| `JWT_SECRET_KEY` | JWT signing key | `dev-secret-key-change-in-production` |
+| `JWT_SECRET_KEY` | JWT signing key | — (required in production) |
 | `MEMORY_BACKEND` | Memory backend (only `json` wired today) | `json` |
 | `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` | LangSmith tracing | `false` / — |
+| `GEMINI_MODEL` | Modelo de Gemini a usar | `gemini-3.1-flash-lite` |
+| `RATE_LIMIT_PER_MINUTE` | Límite de requests por minuto | `60` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos para CORS | `*` |
+| `JWT_EXPIRE_MINUTES` | Duración del token JWT | `60` |
+
+### Google Cloud Run Deployment
+
+When deploying to Google Cloud Run, use **Secret Manager** to handle sensitive credentials securely:
+
+```bash
+# 1. Create secrets in Secret Manager
+echo "your-very-long-jwt-secret-key" | gcloud secrets create jwt-secret-key --data-file=-
+echo "your-google-api-key" | gcloud secrets create google-api-key --data-file=-
+
+# 2. Deploy with secrets mounted as environment variables
+gcloud run deploy sales-agent \
+  --image us-central1-docker.pkg.dev/PROJECT_ID/sales-mcp-repo/sales-agent:latest \
+  --region us-central1 \
+  --set-secrets="JWT_SECRET_KEY=jwt-secret-key:latest,GOOGLE_API_KEY=google-api-key:latest" \
+  --set-env-vars="GEMINI_MODEL=gemini-3.1-flash-lite"
+```
+
+Or use the automated deployment script:
+
+```bash
+# From the project root directory
+./deploy.sh sales-mcp-repo
+```
+
+The script will automatically detect your existing repository and deploy with the correct configuration.
 
 ---
 
