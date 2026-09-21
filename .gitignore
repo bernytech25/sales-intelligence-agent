@@ -1,30 +1,4 @@
-```gitignore
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Dependencies
-.venv/
-venv/
-env/
-.env
-.env.local
-.env.*
-
-# Testing
-.pytest_cache/
-.coverage
-coverage/
-
-# Data files that might be temporary
-data/*.json
-
-# Logs
-*.log
-
-# OS generated files
-.DS_Store
-Thumbs.db
+```
+# Executable/binary files
+sales-intelligence-agent
 ```
