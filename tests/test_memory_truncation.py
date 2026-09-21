@@ -47,20 +47,21 @@ def test_truncate_history_vacio():
 # ── _enrich_question ──────────────────────────────────────────────────────────
 
 def test_enrich_question_sin_historial_no_cambia():
-    assert _enrich_question("¿Cuánto vendió Ana?", []) == "¿Cuánto vendió Ana?"
+    # Sin historial, la pregunta no se modifica
+    assert _enrich_question("¿Cuánto vendió Ana García?", []) == "¿Cuánto vendió Ana García?"
 
 
 def test_enrich_question_sin_pronombre_no_cambia():
-    history = [{"role": "assistant", "content": "Ana vendió $50.000"}]
+    history = [{"role": "assistant", "content": "Ana García vendió $50.000"}]
     pregunta = "¿Cuál es el producto más vendido?"
     assert _enrich_question(pregunta, history) == pregunta
 
 
 def test_enrich_question_con_pronombre_agrega_contexto():
-    history = [{"role": "assistant", "content": "Ana vendió $50.000 en enero"}]
+    history = [{"role": "assistant", "content": "Ana García vendió $50.000 en enero"}]
     resultado = _enrich_question("¿y ella cuánto ganó en febrero?", history)
     assert "Contexto:" in resultado
-    assert "Ana vendió $50.000 en enero" in resultado
+    assert "Ana García vendió $50.000 en enero" in resultado
 
 
 def test_enrich_question_usa_la_ultima_respuesta_del_asistente():

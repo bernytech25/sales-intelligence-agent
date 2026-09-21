@@ -53,9 +53,13 @@ app.add_middleware(
 
 _cors_allowed_origins = [
     origin.strip()
-    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
     if origin.strip()
 ]
+# Si CORS_ALLOWED_ORIGINS no está definido o es "*", permitir todos los orígenes
+if not _cors_allowed_origins or _cors_allowed_origins == ["*"]:
+    _cors_allowed_origins = ["*"]
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_allowed_origins,

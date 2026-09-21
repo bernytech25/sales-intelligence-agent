@@ -8,9 +8,9 @@ Flujo:
 4. La dependencia get_current_user valida el token en cada endpoint protegido
 
 En producción:
-- Los usuarios se guardarían en base de datos (Cosmos DB o SQL)
+- Los usuarios se guardarían en base de datos (Firestore/SQL)
 - Las contraseñas se hashean con bcrypt (ya implementado)
-- El SECRET_KEY debe ser una clave larga y aleatoria guardada en variables de entorno
+- El SECRET_KEY debe ser una clave larga y aleatoria guardada en Secret Manager
 """
 
 import os

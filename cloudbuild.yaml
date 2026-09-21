@@ -9,6 +9,11 @@ steps:
   #    reproducible) and also with :latest (convenience pointer only —
   #    never deploy off :latest in a real rollback scenario, deploy off
   #    the SHA tag so you know exactly what's running).
+  #
+  #    IMPORTANT: $SHORT_SHA is only populated when Cloud Build is triggered
+  #    by a Cloud Build Trigger (e.g., GitHub trigger). For manual builds,
+  #    use: gcloud builds submit --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
+  #
   - name: gcr.io/cloud-builders/docker
     args:
       - build
@@ -30,6 +35,8 @@ steps:
   # 3. Deploy to Cloud Run, pinned to the SHA tag (not :latest) so this
   #    build always deploys exactly what it just built and pushed — no
   #    race with a later build overwriting :latest before this step runs.
+  #    NOTE: If $SHORT_SHA is empty (manual builds without trigger), this
+  #    will fail. Use --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
   - name: gcr.io/google-cloud-sdk/slim
     entrypoint: gcloud
     args:

@@ -18,12 +18,12 @@ Los traces completos, con el detalle de grounding real contra el output
 de cada tool, quedan disponibles en LangSmith si el tracing está activo.
 """
 
+import sys
 import os
 import time
-from dotenv import load_dotenv
 
-# Cargar variables de entorno (incluyendo LangSmith)
-load_dotenv()
+# Agregar la carpeta padre al path para poder importar app
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.agent_langgraph import run_agent
 
@@ -57,7 +57,7 @@ TESTS = [
     },
     {
         "name": "Vendedor específico",
-        "question": "¿Cuánto vendió Ana en febrero?",
+        "question": "¿Cuánto vendió Ana García en febrero?",
         "expected_tool": "tool_ventas_vendedor_por_mes",
     },
     {

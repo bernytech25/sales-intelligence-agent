@@ -48,7 +48,7 @@ def tool_ventas_por_categoria() -> str:
 
 @tool
 def tool_ventas_por_region() -> str:
-    """Obtiene el total de ventas agrupado por región geográfica (Norte, Sur, Centro)."""
+    """Obtiene el total de ventas agrupado por región geográfica (Norte, Sur, Centro, Este, Oeste)."""
     return json.dumps(ventas_por_region(), ensure_ascii=False)
 
 @tool
@@ -160,9 +160,15 @@ _agent = build_agent()
 def _enrich_question(question: str, history: list[dict]) -> str:
     if not history:
         return question
-    referencias = ["cuanto vendio", "y ella", "y el", "ese mes", "esa persona",
-                   "cuanto gano", "y en", "ese producto", "esa region"]
-    if not any(ref in question.lower() for ref in referencias):
+    # Búsqueda case-insensitive que incluye variantes con/sin acentos
+    question_lower = question.lower()
+    referencias = [
+        "cuanto vendi", "cuánto vendi",  # vendió/vendio
+        "cuanto gano", "cuánto gan",     # ganó/gano
+        "y ella", "y el ",               # espacio después de "el" para evitar "tienda"
+        "ese mes", "ese producto", "esa region", "esa persona",
+    ]
+    if not any(ref in question_lower for ref in referencias):
         return question
     ultimas = [m["content"] for m in history if m["role"] == "assistant"]
     if not ultimas:
@@ -178,7 +184,7 @@ def _truncate_history(history: list[dict]) -> list[dict]:
 
 
 def _extract_answer(result: dict) -> str:
-    """Extrae texto de la respuesta del agente. Funciona con Groq (str) y Gemini (list)."""
+    """Extrae texto de la respuesta del agente. Solo Gemini (list)."""
     content = result["messages"][-1].content
 
     if isinstance(content, str):

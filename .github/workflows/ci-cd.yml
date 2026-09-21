@@ -34,6 +34,9 @@ jobs:
           JWT_SECRET_KEY: ci-test-secret-key-not-for-production
         run: python -m pytest tests/test_api.py -v
 
+      - name: Run rate limit tests
+        run: python -m pytest tests/test_rate_limit.py -v
+
   build:
     name: 🐳 Build Docker Image
     runs-on: ubuntu-latest

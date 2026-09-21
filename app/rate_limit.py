@@ -1,20 +1,17 @@
 """
-Rate limiting compartido, reutilizado tanto por app/main.py (FastAPI, JWT)
-como por app/mcp_server.py (MCP, token fijo).
+Rate limiting para la API REST (app/main.py).
 
-Se separa a este módulo por el mismo motivo que prompts.py: evitar que la
-lógica de "ventana deslizante de 60s" quede duplicada y se desincronice
-entre los dos servidores.
+Limita requests por IP dentro de una ventana deslizante de 60s usando el
+header X-Forwarded-For (necesario detrás de Cloud Run, que actúa como proxy).
 
-Nota de diseño: en mcp_server.py se cuenta por token (un solo cliente
-conocido). Acá en cambio contamos por IP, porque main.py tiene múltiples
-usuarios JWT distintos y lo que queremos frenar es abuso por origen de
-red, no por usuario autenticado.
+Nota: Este módulo es específico para la API REST con autenticación JWT.
+El servidor MCP (mcp_server.py) tiene su propio middleware que combina
+auth + rate limit por token, porque sus necesidades son distintas:
+- REST: múltiples usuarios JWT, rate limit por IP para prevenir abuso
+- MCP: un solo token fijo, rate limit por token
 
-Misma limitación conocida que en mcp_server.py: el contador vive en
-memoria del proceso. Si Cloud Run escala a más de una instancia, el
-límite real es N x límite/min, no un límite global estricto. Para eso,
-el siguiente paso sería mover el contador a Memorystore (Redis).
+No hay duplicación real porque cada implementación cuenta contra claves
+distintas (IP vs token) y sirve propósitos diferentes.
 """
 
 import time
