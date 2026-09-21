@@ -1,0 +1,14 @@
+{
+  "test-persistent-guardado": [
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-09-20T23:09:55.731225"
+    },
+    {
+      "role": "assistant",
+      "content": "Laura Fernández vendió $414,412.",
+      "timestamp": "2026-09-20T23:09:55.731461"
+    }
+  ]
+}
