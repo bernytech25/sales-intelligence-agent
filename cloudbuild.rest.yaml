@@ -1,0 +1,56 @@
+# cloudbuild.rest.yaml
+# Configuración de Cloud Build para desplegar la API REST (FastAPI) en Cloud Run
+#
+# IMPORTANTE: $SHORT_SHA solo se llena automáticamente cuando Cloud Build es disparado
+# por un Trigger (ej. GitHub trigger). Para builds manuales, usa:
+#   gcloud builds submit --config cloudbuild.rest.yaml \
+#     --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
+
+substitutions:
+  _REGION: us-central1
+  _REPO: sales-repo
+  _IMAGE: sales-agent
+  _SERVICE: sales-agent
+
+steps:
+  # 1. Construir la imagen Docker, etiquetada con el SHA del commit (trazable,
+  #    reproducible) y también con :latest (solo como puntero de conveniencia).
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest'
+      - '.'
+
+  # 2. Push de ambas etiquetas a Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}'
+
+  # 3. Desplegar en Cloud Run, fijado al tag SHA (no :latest) para asegurar
+  #    que siempre se despliega exactamente lo que se construyó.
+  - name: 'gcr.io/google-cloud-sdk/slim'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE}'
+      - '--image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,JWT_SECRET_KEY=jwt-secret-key:latest'
+      - '--set-env-vars=CORS_ALLOWED_ORIGINS=*'
+
+images:
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,6 +1,6 @@
 substitutions:
   _REGION: us-central1
-  _REPO: sales-mcp-repo
+  _REPO: cloud-run-source-deploy
   _IMAGE: sales-intelligence-mcp
   _SERVICE: sales-intelligence-mcp
 
