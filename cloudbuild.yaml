@@ -46,8 +46,8 @@ steps:
       - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA
       - --region=${_REGION}
       - --allow-unauthenticated
-      - --set-secrets=MCP_AUTH_TOKEN=mcp-auth-token:latest
-      - --set-env-vars=ALLOWED_HOST=${_SERVICE}-$PROJECT_NUMBER.${_REGION}.run.app
+      - --set-secrets=MCP_AUTH_TOKEN=mcp-auth-token:latest,GOOGLE_API_KEY=google-api-key:latest
+      - --set-env-vars=ALLOWED_HOST=${_SERVICE}-$PROJECT_NUMBER.${_REGION}.run.app,MCP_TRANSPORT=streamable-http
 
 images:
   - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE}:$SHORT_SHA
