@@ -1,0 +1,44 @@
+{
+  "test-persistent-guardado": [
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-09-21T15:43:47.100448"
+    },
+    {
+      "role": "assistant",
+      "content": "Laura Fernández vendió $414,412.",
+      "timestamp": "2026-09-21T15:43:47.100744"
+    },
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-09-21T15:58:36.216926"
+    },
+    {
+      "role": "assistant",
+      "content": "Laura Fernández vendió $414,412.",
+      "timestamp": "2026-09-21T15:58:36.217193"
+    },
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-09-21T15:59:09.010889"
+    },
+    {
+      "role": "assistant",
+      "content": "Laura Fernández vendió $414,412.",
+      "timestamp": "2026-09-21T15:59:09.011161"
+    },
+    {
+      "role": "user",
+      "content": "¿Cuántos productos hay?",
+      "timestamp": "2026-09-21T16:05:10.790252"
+    },
+    {
+      "role": "assistant",
+      "content": "Laura Fernández vendió $414,412.",
+      "timestamp": "2026-09-21T16:05:10.790588"
+    }
+  ]
+}

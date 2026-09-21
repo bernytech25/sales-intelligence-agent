@@ -2,7 +2,17 @@
 Tests aislados del RateLimitMiddleware, usando una app Starlette mínima
 propia (no la app real de main.py) para no compartir contador con el
 resto de la suite ni depender de JWT/DB.
+
+Nota: Este test requiere que `app` esté en el Python path. Funciona con:
+  python -m pytest tests/test_rate_limit.py -v
+Pero falla con:
+  pytest tests/test_rate_limit.py -v
+Porque no agrega automáticamente el directorio raíz al path.
 """
+
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 from starlette.applications import Starlette

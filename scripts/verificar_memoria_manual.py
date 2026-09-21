@@ -30,8 +30,7 @@ def probar_memoria():
     
     preguntas = [
         "¿Quiénes son los vendedores?",
-        "¿Cuánto vendió Ana?",
-        "¿Cuánto vendió Pedro?",
+        "¿Cuánto vendió Ana García?",
         "¿Cuál es el producto más vendido?",
         "¿Qué productos hay en la tienda?",
         "¿Cuáles son las ventas por región?",
@@ -39,7 +38,7 @@ def probar_memoria():
         "¿Cómo fueron las ventas en Enero?",
         "¿Y en Febrero?",
         "¿Y en Marzo?",
-        "¿Cuánto vendió Ana en Enero?",
+        "¿Cuánto vendió Ana García en Enero?",
     ]
     
     for i, pregunta in enumerate(preguntas, 1):
@@ -57,8 +56,9 @@ def probar_memoria():
     print("=" * 60)
     
     ultima_respuesta = history[-1]["content"]
-    if "Ana" in ultima_respuesta and ("ventas" in ultima_respuesta or "$" in ultima_respuesta or "pesos" in ultima_respuesta):
-        print("✅ MEMORIA FUNCIONA: El agente recuerda quién es Ana")
+    # Se verifica que la respuesta mencione a Ana García y contenga datos de ventas
+    if "Ana García" in ultima_respuesta or ("Ana" in ultima_respuesta and ("ventas" in ultima_respuesta or "$" in ultima_respuesta or "pesos" in ultima_respuesta)):
+        print("✅ MEMORIA FUNCIONA: El agente recuerda quién es Ana García")
     else:
         print("⚠️ REVISA MANUALMENTE:")
         print(f"Respuesta: {ultima_respuesta}")

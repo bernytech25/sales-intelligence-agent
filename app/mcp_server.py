@@ -1,7 +1,7 @@
 """
 Servidor MCP (Model Context Protocol) para el Sales Intelligence Agent.
 
-Expone las mismas 9 funciones de análisis de app/tools.py como "tools" MCP,
+Expone las mismas 10 funciones de análisis de app/tools.py como "tools" MCP,
 de forma que cualquier cliente MCP (Claude Desktop, Claude.ai, Cursor, otro
 agente) pueda consultarlas directamente, sin pasar por LangGraph.
 
@@ -90,7 +90,7 @@ def tool_ventas_por_categoria() -> str:
 
 @mcp.tool()
 def tool_ventas_por_region() -> str:
-    """Obtiene el total de ventas agrupado por región geográfica (Norte, Sur, Centro)."""
+    """Obtiene el total de ventas agrupado por región geográfica (Norte, Sur, Centro, Este, Oeste)."""
     return json.dumps(ventas_por_region(), ensure_ascii=False)
 
 
@@ -169,7 +169,13 @@ class AuthAndRateLimitMiddleware(BaseHTTPMiddleware):
     separado -- el límite real termina siendo N x 60/min en vez de 60/min
     total, donde N es la cantidad de instancias activas. Para un límite
     estricto de verdad en múltiples instancias, el siguiente paso sería
-    mover el contador a Memorystore (Redis) en vez de memoria local."""
+    mover el contador a Memorystore (Redis) en vez de memoria local.
+    
+    Nota: Este middleware es independiente del rate_limit.py (que cuenta por IP
+    para la API REST). No hay duplicación porque cada servidor tiene necesidades
+    distintas: auth por token + rate limit por token para MCP, vs rate limit por IP
+    para la API REST con JWT.
+    """
 
     def __init__(self, app, expected_token: str, requests_per_minute: int = 60):
         super().__init__(app)

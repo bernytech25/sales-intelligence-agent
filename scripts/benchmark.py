@@ -1,7 +1,10 @@
 """
 Benchmark: LangGraph + Groq vs Semantic Kernel + Azure OpenAI
-Hace las mismas 10 preguntas a ambas APIs, mide latencia real,
+Hace las mismas 9 preguntas a ambas APIs, mide latencia real,
 y genera una tabla comparativa + exporta CSV con los resultados.
+
+NOTA: Este script requiere que el servidor de Semantic Kernel esté corriendo
+en http://localhost:8001. Ese servidor NO está incluido en este repositorio.
 
 Uso:
     python benchmark.py
@@ -24,7 +27,7 @@ from rich import box
 # ── Configuración ─────────────────────────────────────────────────────────────
 
 LANGGRAPH_URL = "http://localhost:8000"
-SK_URL = "http://localhost:8001"
+SK_URL = "http://localhost:8001"  # Semantic Kernel server (no incluido en este repo)
 
 CREDENTIALS = {
     "username": "admin",
@@ -33,7 +36,7 @@ CREDENTIALS = {
 
 SESSION_ID = f"benchmark-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
 
-# 10 preguntas idénticas para ambos sistemas
+# 9 preguntas idénticas para ambos sistemas
 QUESTIONS = [
     "¿Cuál es el resumen general de ventas?",
     "¿Quién vendió más?",
@@ -41,8 +44,8 @@ QUESTIONS = [
     "¿Cuál es el producto más vendido?",
     "¿Quién vendió menos y por qué crees que fue así?",
     "¿Qué productos vende la tienda?",
-    "¿Cuánto vendió Ana en febrero?",
-    "¿En qué región se vende más el producto más vendido?",
+    "¿Cuánto vendió Ana García en febrero?",
+    "¿En qué región se vende más el producto Laptop Pro?",
     "Si tuvieras que recomendar una acción para mejorar las ventas, ¿cuál sería?",
 ]
 
@@ -166,7 +169,7 @@ def run_benchmark():
             "lg_latencia": lg_result["latency"],
             "lg_ok": "✅" if lg_result["ok"] else "❌",
             "sk_latencia": sk_result["latency"],
-            "sk_ok": "✅" if sk_result["ok"] else "✅",
+            "sk_ok": "✅" if sk_result["ok"] else "❌",
             "diferencia": round(sk_result["latency"] - lg_result["latency"], 2),
             "lg_answer": lg_result["answer"],
             "sk_answer": sk_result["answer"],
