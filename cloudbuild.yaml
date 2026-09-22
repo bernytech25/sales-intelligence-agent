@@ -37,7 +37,10 @@ steps:
   #    race with a later build overwriting :latest before this step runs.
   #    NOTE: If $SHORT_SHA is empty (manual builds without trigger), this
   #    will fail. Use --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
-  - name: gcr.io/google-cloud-sdk/slim
+  # Use the supported Cloud Build gcloud builder. The previous
+  # gcr.io/google-cloud-sdk/slim image is no longer readable by this build
+  # service account and caused the deploy step to fail after the image push.
+  - name: gcr.io/cloud-builders/gcloud
     entrypoint: gcloud
     args:
       - run

@@ -1,0 +1,114 @@
+name: Deploy MCP to Cloud Run
+
+on:
+  workflow_run:
+    workflows: ["CI - Sales Intelligence Agent"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Never let two commits deploy the same Cloud Run service concurrently.
+concurrency:
+  group: deploy-mcp-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REPOSITORY: ${{ vars.GCP_MCP_ARTIFACT_REPOSITORY }}
+  SERVICE: ${{ vars.GCP_MCP_SERVICE }}
+
+jobs:
+  deploy:
+    name: Build, deploy, and smoke-test MCP
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    environment: production
+
+    steps:
+      - name: Checkout the validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Authenticate to Google Cloud without a key file
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "$REGION"
+          test -n "$ARTIFACT_REPOSITORY"
+          test -n "$SERVICE"
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and publish immutable image
+        id: image
+        shell: bash
+        run: |
+          COMMIT_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/sales-intelligence-mcp:${COMMIT_SHA}"
+          docker build --file Dockerfile.mcp --tag "$IMAGE" .
+          docker push "$IMAGE"
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Read current public host
+        id: service
+        shell: bash
+        run: |
+          URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')"
+          test -n "$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "host=${URL#https://}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy new Cloud Run revision
+        shell: bash
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --platform managed \
+            --image "${{ steps.image.outputs.uri }}" \
+            --allow-unauthenticated \
+            --update-secrets "MCP_AUTH_TOKEN=mcp-auth-token:latest" \
+            --update-env-vars "MCP_TRANSPORT=streamable-http,ALLOWED_HOST=${{ steps.service.outputs.host }}" \
+            --quiet
+
+      - name: Smoke-test the deployed MCP service
+        shell: bash
+        run: |
+          STATUS="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --retry 5 --retry-all-errors --retry-delay 3 \
+            --header 'Authorization: Bearer invalid-smoke-test-token' \
+            "${{ steps.service.outputs.url }}/mcp")"
+          test "$STATUS" = "401"
+
+      - name: Publish deployment summary
+        shell: bash
+        run: |
+          REVISION="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.latestReadyRevisionName)')"
+          {
+            echo "## MCP deployment succeeded"
+            echo
+            echo "- Service: \`$SERVICE\`"
+            echo "- Revision: \`$REVISION\`"
+            echo "- Image: \`${{ steps.image.outputs.uri }}\`"
+            echo "- URL: ${{ steps.service.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"

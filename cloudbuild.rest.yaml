@@ -35,7 +35,9 @@ steps:
 
   # 3. Desplegar en Cloud Run, fijado al tag SHA (no :latest) para asegurar
   #    que siempre se despliega exactamente lo que se construyó.
-  - name: 'gcr.io/google-cloud-sdk/slim'
+  # Supported Cloud Build gcloud builder; avoids the retired/unreadable
+  # google-cloud-sdk/slim image used by the former manual deployment path.
+  - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: gcloud
     args:
       - 'run'
