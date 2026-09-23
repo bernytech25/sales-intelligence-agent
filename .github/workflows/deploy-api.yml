@@ -78,7 +78,7 @@ jobs:
             --service-account "sales-agent-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --update-secrets "GOOGLE_API_KEY=google-api-key:latest,JWT_SECRET_KEY=jwt-secret-key:latest" \
-            --update-env-vars "RATE_LIMIT_PER_MINUTE=60" \
+            --update-env-vars "RATE_LIMIT_PER_MINUTE=60,MEMORY_BACKEND=firestore" \
             --quiet
 
       - name: Read deployed service URL

@@ -8,8 +8,8 @@ Dos tipos:
 
 El backend de memoria persistente se elige con la variable de entorno
 MEMORY_BACKEND:
-  MEMORY_BACKEND=json -> usa el archivo local data/memory.json (default)
-  MEMORY_BACKEND=cosmos -> usa Azure Cosmos DB
+  MEMORY_BACKEND=json -> usa el archivo local data/memory.json (sólo local)
+  MEMORY_BACKEND=firestore -> usa Cloud Firestore (producción)
 
 Las tres clases comparten la misma interfaz pública
 (add_message, get_history, get_history_with_timestamps, clear),
@@ -33,22 +33,23 @@ class InSessionMemory:
     def __init__(self):
         self._sessions: dict[str, list[dict]] = {}
 
-    def add_message(self, session_id: str, role: str, content: str):
-        if session_id not in self._sessions:
-            self._sessions[session_id] = []
-        self._sessions[session_id].append({
+    def add_message(self, user_id: str, conversation_id: str, role: str, content: str):
+        key = f"{user_id}:{conversation_id}"
+        if key not in self._sessions:
+            self._sessions[key] = []
+        self._sessions[key].append({
             "role": role,
             "content": content,
             "timestamp": datetime.now().isoformat(),
         })
 
-    def get_history(self, session_id: str) -> list[dict]:
+    def get_history(self, user_id: str, conversation_id: str) -> list[dict]:
         """Retorna el historial sin timestamps (formato para el agente)."""
-        messages = self._sessions.get(session_id, [])
+        messages = self._sessions.get(f"{user_id}:{conversation_id}", [])
         return [{"role": m["role"], "content": m["content"]} for m in messages]
 
-    def clear(self, session_id: str):
-        self._sessions.pop(session_id, None)
+    def clear(self, user_id: str, conversation_id: str):
+        self._sessions.pop(f"{user_id}:{conversation_id}", None)
 
     def list_sessions(self) -> list[str]:
         return list(self._sessions.keys())
@@ -77,7 +78,8 @@ class PersistentMemory:
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-    def add_message(self, session_id: str, role: str, content: str):
+    def add_message(self, user_id: str, conversation_id: str, role: str, content: str):
+        session_id = f"{user_id}:{conversation_id}"
         data = self._load()
         if session_id not in data:
             data[session_id] = []
@@ -88,16 +90,19 @@ class PersistentMemory:
         })
         self._save(data)
 
-    def get_history(self, session_id: str) -> list[dict]:
+    def get_history(self, user_id: str, conversation_id: str) -> list[dict]:
+        session_id = f"{user_id}:{conversation_id}"
         data = self._load()
         messages = data.get(session_id, [])
         return [{"role": m["role"], "content": m["content"]} for m in messages]
 
-    def get_history_with_timestamps(self, session_id: str) -> list[dict]:
+    def get_history_with_timestamps(self, user_id: str, conversation_id: str) -> list[dict]:
+        session_id = f"{user_id}:{conversation_id}"
         data = self._load()
         return data.get(session_id, [])
 
-    def clear(self, session_id: str):
+    def clear(self, user_id: str, conversation_id: str):
+        session_id = f"{user_id}:{conversation_id}"
         data = self._load()
         data.pop(session_id, None)
         self._save(data)
@@ -110,15 +115,13 @@ class PersistentMemory:
 
 in_session_memory = InSessionMemory()
 
-# 🔒 COSMOS DB COMENTADO — ya no estamos en Azure, usamos JSON local
-# Si en el futuro vuelves a Azure, descomenta las líneas de abajo.
-#
-# _backend = os.getenv("MEMORY_BACKEND", "json").lower()
-#
-# if _backend == "cosmos":
-#     from app.cosmos_memory import CosmosMemory
-#     persistent_memory = CosmosMemory()
-# else:
-#     persistent_memory = PersistentMemory()
+_backend = os.getenv("MEMORY_BACKEND", "firestore").lower()
 
-persistent_memory = PersistentMemory()
+if _backend == "firestore":
+    from app.firestore_memory import FirestoreMemory
+    persistent_memory = FirestoreMemory()
+elif _backend == "json":
+    # Sólo para desarrollo local. Cloud Run nunca debe usar su disco efímero.
+    persistent_memory = PersistentMemory()
+else:
+    raise RuntimeError("MEMORY_BACKEND debe ser 'firestore' o 'json'.")

@@ -19,7 +19,7 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from app.agent_langgraph import run_agent
 from app.tools import resumen_general
@@ -72,13 +72,16 @@ else:
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    session_id: str
+    conversation_id: str = Field(
+        validation_alias=AliasChoices("conversation_id", "session_id"),
+        min_length=1,
+    )
     question: str
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "session_id": "user-123",
+                "conversation_id": "conversation-123",
                 "question": "¿Quién vendió más este trimestre?"
             }
         }
@@ -86,7 +89,7 @@ class ChatRequest(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    session_id: str
+    conversation_id: str
     question: str
     answer: str
 
@@ -137,19 +140,19 @@ def chat(
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="La pregunta no puede estar vacía.")
 
-    history = in_session_memory.get_history(request.session_id)
+    history = in_session_memory.get_history(current_user.username, request.conversation_id)
 
     try:
         answer = run_agent(question=request.question, history=history)
     except Exception:
-        logger.exception("Fallo en run_agent (/chat) - session_id=%s", request.session_id)
+        logger.exception("Fallo en run_agent (/chat) - conversation_id=%s", request.conversation_id)
         raise HTTPException(status_code=500, detail="Error interno procesando la pregunta. Intentá de nuevo.")
 
-    in_session_memory.add_message(request.session_id, "user", request.question)
-    in_session_memory.add_message(request.session_id, "assistant", answer)
+    in_session_memory.add_message(current_user.username, request.conversation_id, "user", request.question)
+    in_session_memory.add_message(current_user.username, request.conversation_id, "assistant", answer)
 
     return ChatResponse(
-        session_id=request.session_id,
+        conversation_id=request.conversation_id,
         question=request.question,
         answer=answer,
     )
@@ -164,47 +167,47 @@ def chat_persistent(
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="La pregunta no puede estar vacía.")
 
-    history = persistent_memory.get_history(request.session_id)
+    history = persistent_memory.get_history(current_user.username, request.conversation_id)
 
     try:
         answer = run_agent(question=request.question, history=history)
     except Exception:
-        logger.exception("Fallo en run_agent (/chat/persistent) - session_id=%s", request.session_id)
+        logger.exception("Fallo en run_agent (/chat/persistent) - conversation_id=%s", request.conversation_id)
         raise HTTPException(status_code=500, detail="Error interno procesando la pregunta. Intentá de nuevo.")
 
-    persistent_memory.add_message(request.session_id, "user", request.question)
-    persistent_memory.add_message(request.session_id, "assistant", answer)
+    persistent_memory.add_message(current_user.username, request.conversation_id, "user", request.question)
+    persistent_memory.add_message(current_user.username, request.conversation_id, "assistant", answer)
 
     return ChatResponse(
-        session_id=request.session_id,
+        conversation_id=request.conversation_id,
         question=request.question,
         answer=answer,
     )
 
 
-@app.get("/memory/{session_id}", tags=["Memoria"])
+@app.get("/memory/{conversation_id}", tags=["Memoria"])
 def get_memory(
-    session_id: str,
+    conversation_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     persistent: bool = False
 ):
     """Ver historial de conversación. Requiere autenticación."""
     if persistent:
-        history = persistent_memory.get_history_with_timestamps(session_id)
+        history = persistent_memory.get_history_with_timestamps(current_user.username, conversation_id)
     else:
-        history = in_session_memory.get_history(session_id)
-    return {"session_id": session_id, "messages": history, "total": len(history)}
+        history = in_session_memory.get_history(current_user.username, conversation_id)
+    return {"conversation_id": conversation_id, "messages": history, "total": len(history)}
 
 
-@app.delete("/memory/{session_id}", tags=["Memoria"])
+@app.delete("/memory/{conversation_id}", tags=["Memoria"])
 def clear_memory(
-    session_id: str,
+    conversation_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     persistent: bool = False
 ):
     """Limpiar historial de una sesión. Requiere autenticación."""
     if persistent:
-        persistent_memory.clear(session_id)
+        persistent_memory.clear(current_user.username, conversation_id)
     else:
-        in_session_memory.clear(session_id)
-    return {"status": "cleared", "session_id": session_id}
+        in_session_memory.clear(current_user.username, conversation_id)
+    return {"status": "cleared", "conversation_id": conversation_id}
