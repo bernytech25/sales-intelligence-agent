@@ -2,172 +2,195 @@
 
 # Sales Intelligence Agent
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Agent-2C3E50?logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![Firestore](https://img.shields.io/badge/Memory-Firestore-FFCA28?logo=firebase&logoColor=black)](https://cloud.google.com/firestore)
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Run_&_Artifact_Registry-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/)
-[![Google Gemini](https://img.shields.io/badge/LLM-Gemini_3.1_Flash_Lite-8E75B2?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-**Conversational sales analysis agent with LangGraph + Model Context Protocol (MCP)**
+**A production-oriented sales analysis agent: trusted calculations, conversational reasoning, and durable business context.**
 
 </div>
 
-> Natural language queries over enterprise sales data, without SQL or a BI dashboard. Two access paths — a REST API and an MCP server — share the same business logic and are deployed independently on **Google Cloud Run**.
+> Ask business questions in natural language instead of writing SQL or navigating a BI dashboard. The REST API and MCP server share the same deterministic sales tools, while remaining independently deployable on Google Cloud Run.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    userHttp(["User — HTTP"]) --> fastapi
-    userMcp(["User — MCP client<br/>(Claude Desktop, Cursor...)"]) --> mcpServer
+flowchart TB
+    user([Business user]) --> api
+    client([MCP client<br/>Claude Desktop, Cursor, ...]) --> bridge[Optional local bridge]
+    bridge --> mcp
 
-    subgraph rest["REST path — Google Cloud Run"]
-        fastapi["FastAPI<br/>main.py"] -- JWT --> memory[("Memory<br/>JSON (Firestore/Redis in progress)")]
-        fastapi --> agent["LangGraph Agent<br/>LLM to Tools to LLM"]
-        agent --> gemini["Gemini 3.1<br/>Flash Lite"]
+    subgraph apiPath[REST API — Google Cloud Run]
+        api[FastAPI] --> auth[JWT authentication]
+        auth --> persistent[Persistent chat endpoint]
+        persistent --> memory[(Cloud Firestore<br/>user / conversation / messages)]
+        persistent --> agent[LangGraph agent]
+        agent --> gemini[Gemini]
     end
 
-    subgraph mcp["MCP path — Google Cloud Run"]
-        mcpServer["MCP Server<br/>mcp_server.py"]
+    subgraph mcpPath[MCP server — Google Cloud Run]
+        mcp[MCP server<br/>Bearer-token protected]
     end
 
-    agent --> tools["tools.py<br/>10 Pandas functions"]
-    mcpServer -- Bearer token --> tools
+    agent --> tools[10 deterministic<br/>sales tools]
+    mcp --> tools
+    tools --> data[(ventas.csv)]
+
+    classDef api fill:#E8F0FE,stroke:#4285F4,color:#1A73E8;
+    classDef state fill:#FFF7E0,stroke:#F9AB00,color:#8A5200;
+    classDef mcp fill:#F3E8FD,stroke:#9334E6,color:#5E239D;
+    classDef core fill:#E6F4EA,stroke:#34A853,color:#137333;
+    class api,auth,persistent,agent,gemini api;
+    class memory state;
+    class mcp,bridge mcp;
+    class tools,data core;
 ```
 
-Both paths call the exact same `tools.py` — no business logic duplicated. FastAPI owns the reasoning loop (LangGraph); MCP exposes the tools and lets the client's own LLM reason over them. Both services run on **Google Cloud Run** with independent deployments.
+### Design principles
 
-## Tech Stack
+- **The LLM interprets; tools calculate.** Sales metrics come from deterministic Pandas functions, not model guesses.
+- **REST owns reasoning and durable memory.** FastAPI combines LangGraph, JWT identity, and Firestore-backed conversation history.
+- **MCP stays stateless.** It exposes the same tools for an MCP client whose own model handles the reasoning loop.
+- **Memory is isolated by identity.** Firestore stores messages under `users/{user_id}/conversations/{conversation_id}`; `user_id` is derived from the validated JWT.
+- **Releases are traceable.** CI/CD deploys immutable images tagged with the validated commit SHA; Cloud Run revisions support rollback.
+
+## What is deployed
+
+| Service | Responsibility | Production URL |
+|---|---|---|
+| `sales-agent` | FastAPI, LangGraph, JWT, Firestore memory | [API and Swagger](https://sales-agent-d5ck373ogq-uc.a.run.app/docs) |
+| `sales-intelligence-mcp` | Stateless MCP access to sales tools | [MCP endpoint](https://sales-intelligence-mcp-d5ck373ogq-uc.a.run.app/mcp) |
+
+Both services use the same `app/tools.py` module, avoiding duplicate business logic.
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| **Orchestration** | LangGraph, LangChain |
-| **LLM** | Google Gemini 3.1 Flash Lite |
-| **API** | FastAPI, JWT auth |
-| **Data** | Pandas, 15K+ transaction dataset |
-| **Memory** | JSON (current) to Firestore/Redis (in progress) |
-| **Infra** | Docker, Google Cloud Run (REST & MCP), Artifact Registry |
-| **CI/CD** | GitHub Actions (tests + Docker build), Cloud Build (MCP deploy) |
-| **Observability** | LangSmith tracing |
-| **Testing** | 55 automated tests (Pytest) + 3 manual eval scripts |
+| Agent orchestration | LangGraph, LangChain |
+| LLM | Google Gemini 3.1 Flash Lite |
+| REST API | FastAPI, JWT, rate limiting, configurable CORS |
+| Persistent memory | Cloud Firestore (FastAPI production) |
+| Sales calculations | Pandas over a 15K+ transaction dataset |
+| MCP | Streamable HTTP in Cloud Run; stdio bridge for Claude Desktop |
+| Infrastructure | Docker, Cloud Run, Artifact Registry, Secret Manager |
+| Delivery | GitHub Actions, Workload Identity Federation, immutable images, smoke tests |
+| Observability | LangSmith tracing |
+| Tests | Pytest — 58 automated tests |
 
-## Endpoints
+## API
+
+All protected routes require `Authorization: Bearer <token>`. Obtain a token through `POST /auth/token`, then use the **Authorize** control in Swagger or send the header from your client.
 
 | Method | Route | Description | Auth |
 |---|---|---|---|
-| GET | `/` | Health check | None |
-| POST | `/auth/token` | Obtain JWT token | Public |
-| GET | `/ventas/resumen` | Sales summary | None |
-| POST | `/chat` | Conversation, in-session memory | Bearer |
-| POST | `/chat/persistent` | Conversation, persistent memory | Bearer |
-| GET/DELETE | `/memory/{session_id}` | View / clear history | Bearer |
+| GET | `/` | Health check | No |
+| POST | `/auth/token` | Obtain a JWT access token | No |
+| GET | `/ventas/resumen` | Deterministic sales summary | Yes |
+| POST | `/chat` | Conversation with process-local, in-session memory | Yes |
+| POST | `/chat/persistent` | Conversation with Firestore-backed memory | Yes |
+| GET / DELETE | `/memory/{conversation_id}` | Read or clear history; use `?persistent=true` for Firestore | Yes |
+
+### Persistent conversation example
+
+Reuse the same `conversation_id` to retain context across requests:
 
 ```bash
-curl -X POST http://localhost:8000/chat \
-  -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" \
-  -d '{"session_id": "user-123", "question": "Who is the top seller?"}'
+curl -X POST http://localhost:8000/chat/persistent \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversation_id": "planning-q4",
+    "question": "Remember that our goal is to increase sales by 20%."
+  }'
 ```
 
-## LangGraph Agent
+The following request with `conversation_id: "planning-q4"` receives the prior conversation as context. `session_id` remains accepted as an input alias during the API transition, but new clients should use `conversation_id`.
 
-State graph with 2 nodes (`node_llm` and `node_tools`) plus a routing function (`should_continue`). 10 decoupled tools in `tools.py`, agnostic to the orchestrator — LangGraph on the REST path, the client's own LLM on the MCP path.
+## Local development
 
-## Memory
+The CI and container images run Python 3.11. Local development has also been validated with Python 3.12.
 
-| Backend | Status |
+```bash
+# Create and activate an isolated environment
+python -m venv .venv
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+
+python -m pip install -r requirements.txt
+
+# Configure local secrets in .env; never commit this file.
+# For local tests, JSON memory avoids any Google Cloud dependency.
+uvicorn app.main:app --reload
+```
+
+Open [http://localhost:8000/docs](http://localhost:8000/docs) to test the API interactively. Use `MEMORY_BACKEND=json` for local development or tests when Firestore credentials are not configured. Cloud Run explicitly uses `MEMORY_BACKEND=firestore`.
+
+### Environment variables
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `GOOGLE_API_KEY` | Gemini API key | Required for agent requests |
+| `JWT_SECRET_KEY` | JWT signing key | Required outside test environments |
+| `MEMORY_BACKEND` | `firestore` for production or `json` for local development/tests | `firestore` |
+| `PORT` | HTTP port injected by Cloud Run | `8080` |
+| `RATE_LIMIT_PER_MINUTE` | Requests allowed per minute | `60` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated approved browser origins | Unset (cross-origin disabled) |
+| `JWT_EXPIRE_MINUTES` | Access-token lifetime | `60` |
+| `GEMINI_MODEL` | Gemini model selected by the agent | `gemini-3.1-flash-lite` |
+| `LANGCHAIN_TRACING_V2` | Enables LangSmith tracing | `false` |
+| `LANGCHAIN_API_KEY` | LangSmith API key | Required when tracing is enabled |
+| `LANGCHAIN_PROJECT` | LangSmith project name | `sales-agent` |
+
+### MCP variables
+
+| Variable | Purpose |
 |---|---|
-| `InSessionMemory` (RAM) | Active — dev/demo |
-| `PersistentMemory` (local JSON) | Active — current default. **Note:** On Cloud Run, local JSON is ephemeral per instance. For true persistence across restarts, Firestore/Redis integration is in progress. |
-| `CosmosMemory` (Azure Cosmos DB) | Deprecated — code present, disconnected |
-| Firestore / Redis | **In progress** — replacing local JSON now that both services run on GCP |
+| `MCP_AUTH_TOKEN` | Bearer token that protects the MCP service |
+| `MCP_TRANSPORT` | `stdio` locally or `streamable-http` in Cloud Run |
+| `ALLOWED_HOST` | Expected Cloud Run host for MCP requests |
+| `MCP_REMOTE_URL` | Optional bridge target when using Claude Desktop |
 
-## MCP Server
+## Testing
 
-`app/mcp_server.py` wraps `tools.py` directly — same 10 tools, no HTTP client or LangGraph knowledge required. Runs local over stdio or remote over streamable-http, bearer-token authenticated. Deployed on **Google Cloud Run**, built and released via `cloudbuild.yaml`:
+Run the full suite locally without calling Firestore, Gemini, Secret Manager, or Cloud Run:
 
-```bash
-gcloud builds submit --config cloudbuild.yaml \
-  --substitutions=_REGION=us-central1,_REPO=sales-mcp-repo,_IMAGE=sales-intelligence-mcp,_SERVICE=sales-intelligence-mcp .
+```powershell
+$env:MEMORY_BACKEND='json'
+$env:JWT_SECRET_KEY='test-only-key'
+python -m pytest -q
 ```
 
-**Important:** The `$SHORT_SHA` substitution in `cloudbuild.yaml` is only populated when Cloud Build is triggered by a **Cloud Build Trigger** (e.g., GitHub trigger). For manual `gcloud builds submit` commands, the tag will be empty. To work around this:
-- **Option A:** Create a Cloud Build Trigger connected to your GitHub repository
-- **Option B:** Manually specify a tag: `--substitutions=SHORT_SHA=$(git rev-parse --short HEAD)`
+The suite covers deterministic sales tools, API contracts, rate limiting, memory truncation, Firestore path/identity contracts, and user isolation. The CI workflow runs these tests and verifies both Docker images before production deployment.
 
-Each build is tagged and deployed by commit SHA (not `:latest`), so every release is traceable and rollback doesn't require a rebuild. `MCP_AUTH_TOKEN` lives in Secret Manager.
+## Delivery and operations
 
-Claude Desktop only speaks local `stdio`, so reaching the remote Cloud Run instance goes through a small local bridge script (`claude-bridge.py`) that forwards stdio to HTTP with the bearer token. Configure `MCP_REMOTE_URL` in the bridge environment when targeting a non-production service or after recreating the Cloud Run service; the script's default is the current production URL. Clients with native remote MCP support (Cursor, Windsurf, VS Code+Cline) connect directly via URL — no bridge needed.
-
-## Tests
-
-```bash
-pytest tests/test_tools.py -v   # 31 unit tests
-pytest tests/test_api.py -v     # 13 integration tests (mocked LLM)
-pytest tests/test_memory_truncation.py -v  # 8 tests
-pytest tests/test_rate_limit.py -v  # 3 tests
-# Total: 55 automated tests
-
-# Manual scripts (require API keys, not run in CI):
-python scripts/test_langsmith.py        # 12-question eval with LangSmith tracing
-python scripts/verificar_memoria_manual.py  # manual memory verification
-python scripts/test_meses_no_contiguos.py   # consistency check (5 runs)
+```text
+push to main
+  → CI tests and Docker verification
+  → immutable image tagged with commit SHA
+  → Cloud Run deployment through Workload Identity Federation
+  → health / MCP smoke test
 ```
 
-## Local Setup
+GitHub Actions authenticates to Google Cloud with Workload Identity Federation. Runtime secrets stay in Secret Manager; no Google credential file, API key, or JWT secret belongs in the repository or GitHub Actions variables.
 
-```bash
-pip install -r requirements.txt
-# configure .env - see Environment Variables below
-uvicorn app.main:app --reload   # then open http://localhost:8000/docs
-```
+Each service is deployed independently. A rollback is performed by moving Cloud Run traffic to a prior ready revision, without rebuilding an old image.
 
-## Environment Variables
+## Product direction
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `GOOGLE_API_KEY` | Gemini API key | — |
-| `JWT_SECRET_KEY` | JWT signing key | — (required in production) |
-| `MEMORY_BACKEND` | Memory backend (only `json` wired today) | `json` |
-| `PORT` | Port for REST API (Cloud Run) | `8080` |
-| `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` | LangSmith tracing | `false` / — |
-| `LANGCHAIN_PROJECT` | Project name for LangSmith | `sales-agent` |
-| `GEMINI_MODEL` | Modelo de Gemini a usar | `gemini-3.1-flash-lite` |
-| `RATE_LIMIT_PER_MINUTE` | Límite de requests por minuto | `60` |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos para CORS | `*` |
-| `JWT_EXPIRE_MINUTES` | Duración del token JWT | `60` |
+> **Future direction — not implemented functionality.** Evolve from answering isolated sales questions into a trusted revenue intelligence copilot: persistent business context, explainable metrics, proactive opportunities, and a shared workspace for commercial teams.
 
-### MCP Server Variables
+Potential product capabilities include scheduled insight summaries, opportunity alerts derived from sales signals, and collaborative workspaces with scoped business context. These are product ideas, not current claims or delivery commitments.
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `MCP_AUTH_TOKEN` | Bearer token for MCP authentication | — (required) |
-| `MCP_TRANSPORT` | Transport mode (`stdio` or `streamable-http`) | `stdio` |
-| `ALLOWED_HOST` | Host pattern for MCP auth (Cloud Run URL) | — |
-| `PORT` | Port for MCP server | `8080` |
+## Security note
 
-### Google Cloud Run Deployment
-
-When deploying to Google Cloud Run, use **Secret Manager** to handle sensitive credentials securely:
-
-```bash
-# 1. Create secrets in Secret Manager
-echo "your-very-long-jwt-secret-key" | gcloud secrets create jwt-secret-key --data-file=-
-echo "your-google-api-key" | gcloud secrets create google-api-key --data-file=-
-
-# 2. Deploy with secrets mounted as environment variables
-gcloud run deploy sales-agent \
-  --image us-central1-docker.pkg.dev/PROJECT_ID/sales-mcp-repo/sales-agent:latest \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-secrets="JWT_SECRET_KEY=jwt-secret-key:latest,GOOGLE_API_KEY=google-api-key:latest" \
-  --set-env-vars="GEMINI_MODEL=gemini-3.1-flash-lite,RATE_LIMIT_PER_MINUTE=60,CORS_ALLOWED_ORIGINS=*"
-```
-
-**Note:** The `sales-mcp-repo` repository name is used consistently across `deploy.sh` and `cloudbuild.yaml`. Both scripts deploy to Google Cloud Run. Adjust if your setup uses a different repository name.
-
+The current API authentication is suitable for personal testing only and still includes demonstration users in the application code. Do not submit sensitive customer or production business data through the public Swagger endpoint. Before external access, replace demo authentication with a real identity provider and maintain secrets in Secret Manager.
 
 ---
 
