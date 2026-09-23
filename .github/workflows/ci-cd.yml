@@ -32,7 +32,13 @@ jobs:
       - name: Run API integration tests
         env:
           JWT_SECRET_KEY: ci-test-secret-key-not-for-production
+          # CI no usa credenciales de Google. Firestore se valida con dobles
+          # unitarios y Cloud Run selecciona el backend firestore al desplegar.
+          MEMORY_BACKEND: json
         run: python -m pytest tests/test_api.py -v
+
+      - name: Run Firestore memory unit tests
+        run: python -m pytest tests/test_firestore_memory.py -v
 
       - name: Run rate limit tests
         run: python -m pytest tests/test_rate_limit.py -v
