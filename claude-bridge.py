@@ -1,7 +1,14 @@
 import os, sys, json, httpx
 
-URL = os.environ.get("MCP_REMOTE_URL", "https://sales-intelligence-mcp-439702316082.us-central1.run.app/mcp")
+# Cloud Run publishes the service's current canonical URL. Keep the local
+# bridge aligned with it; MCP_REMOTE_URL remains the explicit override for a
+# different environment or a future recreated service.
+URL = os.environ.get("MCP_REMOTE_URL", "https://sales-intelligence-mcp-d5ck373ogq-uc.a.run.app/mcp")
 TOKEN = os.environ["MCP_AUTH_TOKEN"]
+
+# Safe startup diagnostic for local MCP clients. It intentionally excludes the
+# bearer token so a connection issue can be distinguished from a stale URL.
+print(f"MCP bridge remote URL: {URL}", file=sys.stderr, flush=True)
 
 client = httpx.Client(timeout=60.0, headers={
     "Authorization": f"Bearer {TOKEN}",

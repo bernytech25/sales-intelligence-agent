@@ -1,4 +1,4 @@
-# CD automático para el servidor MCP
+# CD automático para MCP y FastAPI
 
 El deploy de producción se define en `.github/workflows/deploy-mcp.yml`.
 Un `push` a `main` despliega únicamente si el workflow **CI - Sales Intelligence
@@ -88,17 +88,68 @@ repository variables:
 | `GCP_MCP_ARTIFACT_REPOSITORY` | `sales-mcp-repo` |
 | `GCP_MCP_SERVICE` | `sales-intelligence-mcp` |
 | `GCP_DEPLOYER_SERVICE_ACCOUNT` | `github-cloud-run-deployer@sales-intelligence-mcp-505519.iam.gserviceaccount.com` |
-| `GCP_WORKLOAD_IDENTITY_PROVIDER` | Full provider resource name returned by `gcloud iam workload-identity-pools providers describe github --project=sales-intelligence-mcp-505519 --location=global --workload-identity-pool=github --format='value(name)'` |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER` | `projects/439702316082/locations/global/workloadIdentityPools/github/providers/github` |
+
+Para FastAPI, agregar además estas variables de repositorio:
+
+| Variable | Value |
+| --- | --- |
+| `GCP_API_ARTIFACT_REPOSITORY` | `sales-api-repo` |
+| `GCP_API_SERVICE` | `sales-agent` |
 
 Do not add `MCP_AUTH_TOKEN` to GitHub. Cloud Run reads it directly from Secret
 Manager during deployment.
 
+## Configuración única de FastAPI
+
+FastAPI usa una cuenta runtime dedicada, en vez de la cuenta predeterminada de
+Compute. Ejecutar una única vez desde Cloud Shell antes del primer deploy:
+
+```bash
+export PROJECT_ID="sales-intelligence-mcp-505519"
+export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+export DEPLOYER_EMAIL="github-cloud-run-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+export API_RUNTIME_EMAIL="sales-agent-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud iam service-accounts create sales-agent-runtime \
+  --project="$PROJECT_ID" \
+  --display-name="Sales Agent FastAPI runtime"
+
+gcloud artifacts repositories create sales-api-repo \
+  --project="$PROJECT_ID" --location="us-central1" \
+  --repository-format=docker \
+  --description="Immutable container images for the Sales Agent FastAPI"
+
+gcloud artifacts repositories add-iam-policy-binding sales-api-repo \
+  --project="$PROJECT_ID" --location="us-central1" \
+  --member="serviceAccount:${DEPLOYER_EMAIL}" \
+  --role="roles/artifactregistry.writer"
+
+gcloud iam service-accounts add-iam-policy-binding "$API_RUNTIME_EMAIL" \
+  --project="$PROJECT_ID" \
+  --member="serviceAccount:${DEPLOYER_EMAIL}" \
+  --role="roles/iam.serviceAccountUser"
+
+for SECRET in google-api-key jwt-secret-key; do
+  gcloud secrets add-iam-policy-binding "$SECRET" \
+    --project="$PROJECT_ID" \
+    --member="serviceAccount:${API_RUNTIME_EMAIL}" \
+    --role="roles/secretmanager.secretAccessor"
+done
+```
+
+El primer despliegue de FastAPI no requiere variable CORS: Swagger (`/docs`) y
+clientes servidor-a-servidor funcionan en el mismo origen o sin CORS. Cuando
+exista una interfaz web separada, configurar `CORS_ALLOWED_ORIGINS` en Cloud
+Run con sus orígenes exactos, por ejemplo `https://app.example.com`; no usar
+`*` en producción.
+
 ## First deployment and rollback
 
 After the GitHub variables and WIF are configured, use **Actions → Deploy MCP
-to Cloud Run → Run workflow**. Confirm the workflow summary reports a new
-revision and the expected image SHA. Subsequent pushes to `main` deploy
-automatically after CI succeeds.
+to Cloud Run → Run workflow** or **Deploy FastAPI to Cloud Run → Run workflow**.
+Confirm the workflow summary reports a new revision and the expected image SHA.
+Subsequent pushes to `main` deploy automatically after CI succeeds.
 
 To roll back, select the prior ready revision in Cloud Run and move traffic
 back to it; do not rebuild an old commit just to roll back.

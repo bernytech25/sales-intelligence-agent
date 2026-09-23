@@ -1,0 +1,110 @@
+name: Deploy FastAPI to Cloud Run
+
+on:
+  workflow_run:
+    workflows: ["CI - Sales Intelligence Agent"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-api-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REPOSITORY: ${{ vars.GCP_API_ARTIFACT_REPOSITORY }}
+  SERVICE: ${{ vars.GCP_API_SERVICE }}
+
+jobs:
+  deploy:
+    name: Build, deploy, and smoke-test FastAPI
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    environment: production
+
+    steps:
+      - name: Checkout the validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Authenticate to Google Cloud without a key file
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          test -n "$PROJECT_ID"
+          test -n "$REGION"
+          test -n "$ARTIFACT_REPOSITORY"
+          test -n "$SERVICE"
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and publish immutable image
+        id: image
+        shell: bash
+        run: |
+          COMMIT_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/sales-agent:${COMMIT_SHA}"
+          docker build --tag "$IMAGE" .
+          docker push "$IMAGE"
+          echo "uri=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy new Cloud Run revision
+        shell: bash
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --platform managed \
+            --image "${{ steps.image.outputs.uri }}" \
+            --service-account "sales-agent-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --update-secrets "GOOGLE_API_KEY=google-api-key:latest,JWT_SECRET_KEY=jwt-secret-key:latest" \
+            --update-env-vars "RATE_LIMIT_PER_MINUTE=60" \
+            --quiet
+
+      - name: Read deployed service URL
+        id: service
+        shell: bash
+        run: |
+          URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')"
+          test -n "$URL"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-test the health endpoint
+        shell: bash
+        run: |
+          curl --fail --silent --show-error \
+            --retry 5 --retry-all-errors --retry-delay 3 \
+            "${{ steps.service.outputs.url }}/" | grep -q '"status":"ok"'
+
+      - name: Publish deployment summary
+        shell: bash
+        run: |
+          REVISION="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format='value(status.latestReadyRevisionName)')"
+          {
+            echo "## FastAPI deployment succeeded"
+            echo
+            echo "- Service: \`$SERVICE\`"
+            echo "- Revision: \`$REVISION\`"
+            echo "- Image: \`${{ steps.image.outputs.uri }}\`"
+            echo "- URL: ${{ steps.service.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"

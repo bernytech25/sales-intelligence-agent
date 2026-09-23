@@ -53,19 +53,20 @@ app.add_middleware(
 
 _cors_allowed_origins = [
     origin.strip()
-    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
     if origin.strip()
 ]
-# Si CORS_ALLOWED_ORIGINS no está definido o es "*", permitir todos los orígenes
-if not _cors_allowed_origins or _cors_allowed_origins == ["*"]:
-    _cors_allowed_origins = ["*"]
-    
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_cors_allowed_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# La API no necesita CORS para Swagger (/docs) ni para clientes servidor-a-servidor.
+# Sólo se habilita cuando una interfaz web conocida declara sus orígenes exactos.
+if _cors_allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_allowed_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    logger.info("CORS cross-origin disabled; configure CORS_ALLOWED_ORIGINS for a web UI")
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
