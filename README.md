@@ -182,11 +182,11 @@ GitHub Actions authenticates to Google Cloud with Workload Identity Federation. 
 
 Each service is deployed independently. A rollback is performed by moving Cloud Run traffic to a prior ready revision, without rebuilding an old image.
 
-## Product direction
+## Product vision
 
-> **Future direction — not implemented functionality.** Evolve from answering isolated sales questions into a trusted revenue intelligence copilot: persistent business context, explainable metrics, proactive opportunities, and a shared workspace for commercial teams.
+The platform is designed to evolve from conversational sales analysis into a trusted revenue intelligence copilot, extending its current foundation of deterministic calculations, durable context, and traceable operations.
 
-Potential product capabilities include scheduled insight summaries, opportunity alerts derived from sales signals, and collaborative workspaces with scoped business context. These are product ideas, not current claims or delivery commitments.
+Future enhancements may include scheduled insight summaries, opportunity alerts derived from sales signals, and collaborative workspaces with scoped business context. This direction builds on the production capabilities described above while keeping the product focused on reliable, explainable business decisions.
 
 ## Security note
 
