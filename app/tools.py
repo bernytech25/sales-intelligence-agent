@@ -108,6 +108,66 @@ def ventas_producto_por_region(producto: str) -> dict:
     }
 
 
+def _ranking_por_region(entidad: str, campo: str, top_n: int, metrica: str) -> dict:
+    """Construye un ranking compacto por región para una entidad de ventas.
+
+    Es un helper privado compartido por las tools de vendedores y productos:
+    centraliza validación, agregación y formato sin exponer una tool genérica
+    que obligue al LLM a conocer nombres internos de columnas.
+    """
+    if not isinstance(top_n, int) or isinstance(top_n, bool) or top_n < 1:
+        return {"error": "top_n debe ser un entero mayor o igual a 1."}
+    if metrica not in {"total", "cantidad"}:
+        return {"error": "metrica debe ser 'total' o 'cantidad'."}
+
+    df = _load_df()
+    resumen = (
+        df.groupby(["region", campo])
+        .agg(total_vendido=("total", "sum"), unidades_vendidas=("cantidad", "sum"))
+        .reset_index()
+    )
+    regiones = df.groupby("region")["total"].sum().sort_values(ascending=False).index
+    columna_orden = "total_vendido" if metrica == "total" else "unidades_vendidas"
+    ranking_por_region = {}
+
+    for region in regiones:
+        ranking = resumen[resumen["region"] == region].sort_values(
+            [columna_orden, campo], ascending=[False, True]
+        ).head(top_n)
+        ranking_por_region[region] = [
+            {
+                entidad: fila[campo],
+                "total_vendido": float(fila["total_vendido"]),
+                "unidades_vendidas": int(fila["unidades_vendidas"]),
+            }
+            for _, fila in ranking.iterrows()
+        ]
+
+    return {
+        "metrica": metrica,
+        "top_n": top_n,
+        "ranking_por_region": ranking_por_region,
+    }
+
+
+def ranking_vendedores_por_region(top_n: int = 5, metrica: str = "total") -> dict:
+    """Devuelve los vendedores con mejor desempeño en cada región.
+
+    Por defecto los ordena por facturación (``metrica='total'``). Usar
+    ``metrica='cantidad'`` para ordenarlos por unidades vendidas.
+    """
+    return _ranking_por_region("vendedor", "vendedor", top_n, metrica)
+
+
+def ranking_productos_por_region(top_n: int = 5, metrica: str = "cantidad") -> dict:
+    """Devuelve los productos más vendidos en cada región.
+
+    Por defecto los ordena por unidades (``metrica='cantidad'``). Usar
+    ``metrica='total'`` para ordenarlos por facturación.
+    """
+    return _ranking_por_region("producto", "producto", top_n, metrica)
+
+
 def lista_productos() -> dict:
     """Lista todos los productos con nombre, categoría y unidades vendidas."""
     df = _load_df()

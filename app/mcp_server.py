@@ -1,7 +1,7 @@
 """
 Servidor MCP (Model Context Protocol) para el Sales Intelligence Agent.
 
-Expone las mismas 10 funciones de análisis de app/tools.py como "tools" MCP,
+Expone las mismas 12 funciones de análisis de app/tools.py como "tools" MCP,
 de forma que cualquier cliente MCP (Claude Desktop, Claude.ai, Cursor, otro
 agente) pueda consultarlas directamente, sin pasar por LangGraph.
 
@@ -40,6 +40,8 @@ from app.tools import (
     ventas_vendedor_por_mes,
     vendedor_ranking_periodo,
     ventas_producto_por_region,
+    ranking_vendedores_por_region,
+    ranking_productos_por_region,
     lista_productos,
     producto_mas_vendido,
     resumen_general,
@@ -123,6 +125,21 @@ def tool_ventas_por_producto(producto: str) -> str:
     """Obtiene en qué regiones se vende un producto específico, con unidades y
     pesos por región. Usar cuando pregunten dónde se vende un producto."""
     return json.dumps(ventas_producto_por_region(producto), ensure_ascii=False)
+
+@mcp.tool()
+def tool_ranking_vendedores_por_region(top_n: int = 5, metrica: str = "total") -> str:
+    """Obtiene los vendedores con mejor desempeño dentro de cada región en una sola consulta.
+    Usar cuando pregunten quiénes son los vendedores que más o menos vendieron por región.
+    metrica='total' ordena por facturación y metrica='cantidad' por unidades."""
+    return json.dumps(ranking_vendedores_por_region(top_n, metrica), ensure_ascii=False)
+
+
+@mcp.tool()
+def tool_ranking_productos_por_region(top_n: int = 5, metrica: str = "cantidad") -> str:
+    """Obtiene los productos más vendidos dentro de cada región en una sola consulta.
+    Usar cuando pregunten cuáles productos lideran por región.
+    metrica='cantidad' ordena por unidades y metrica='total' por facturación."""
+    return json.dumps(ranking_productos_por_region(top_n, metrica), ensure_ascii=False)
 
 
 @mcp.tool()

@@ -37,7 +37,7 @@ flowchart TB
         mcp[MCP server<br/>Bearer-token protected]
     end
 
-    agent --> tools[10 deterministic<br/>sales tools]
+    agent --> tools[12 deterministic<br/>sales tools]
     mcp --> tools
     tools --> data[(ventas.csv)]
 
@@ -53,7 +53,7 @@ flowchart TB
 
 ### Design principles
 
-- **The LLM interprets; tools calculate.** Sales metrics come from deterministic Pandas functions, not model guesses.
+- **The LLM interprets; tools calculate.** Sales metrics come from 12 deterministic Pandas functions, not model guesses.
 - **REST owns reasoning and durable memory.** FastAPI combines LangGraph, JWT identity, and Firestore-backed conversation history.
 - **MCP stays stateless.** It exposes the same tools for an MCP client whose own model handles the reasoning loop.
 - **Memory is isolated by identity.** Firestore stores messages under `users/{user_id}/conversations/{conversation_id}`; `user_id` is derived from the validated JWT.
@@ -81,7 +81,7 @@ Both services use the same `app/tools.py` module, avoiding duplicate business lo
 | Infrastructure | Docker, Cloud Run, Artifact Registry, Secret Manager |
 | Delivery | GitHub Actions, Workload Identity Federation, immutable images, smoke tests |
 | Observability | LangSmith tracing |
-| Tests | Pytest — 58 automated tests |
+| Tests | Pytest — 62 automated tests |
 
 ## API
 
@@ -98,19 +98,32 @@ All protected routes require `Authorization: Bearer <token>`. Obtain a token thr
 
 ### Persistent conversation example
 
-Reuse the same `conversation_id` to retain context across requests:
+Authenticate once through `POST /auth/token`. Then send both requests to
+`POST /chat/persistent` with the same token and the same `conversation_id`.
 
-```bash
-curl -X POST http://localhost:8000/chat/persistent \
-  -H "Authorization: Bearer <TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "conversation_id": "planning-q4",
-    "question": "Remember that our goal is to increase sales by 20%."
-  }'
+**1. Save a piece of business context**
+
+```json
+{
+  "conversation_id": "planning-q4",
+  "question": "Remember that our goal is to increase sales by 20%."
+}
 ```
 
-The following request with `conversation_id: "planning-q4"` receives the prior conversation as context. `session_id` remains accepted as an input alias during the API transition, but new clients should use `conversation_id`.
+**2. Ask for that context in a later request**
+
+```json
+{
+  "conversation_id": "planning-q4",
+  "question": "What is our sales objective?"
+}
+```
+
+The second answer should identify the 20% sales-growth objective even though
+the objective was not repeated. Firestore retrieves the prior messages because
+both requests belong to the same authenticated user and `conversation_id`.
+`session_id` remains accepted as an input alias during the API transition, but
+new clients should use `conversation_id`.
 
 ## Local development
 

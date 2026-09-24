@@ -18,6 +18,8 @@ from app.tools import (
     ventas_vendedor_por_mes,
     vendedor_ranking_periodo,
     ventas_producto_por_region,
+    ranking_vendedores_por_region,
+    ranking_productos_por_region,
     lista_productos,
     producto_mas_vendido,
     resumen_general,
@@ -150,6 +152,50 @@ def test_ventas_producto_por_region_case_insensitive():
     producto = productos[0]
     resultado = ventas_producto_por_region(producto.lower())
     assert "region_top" in resultado
+
+
+# ── rankings por región ──────────────────────────────────────────────────────
+
+def test_ranking_vendedores_por_region_estructura_y_orden():
+    resultado = ranking_vendedores_por_region(top_n=2)
+    assert resultado["metrica"] == "total"
+    assert resultado["top_n"] == 2
+    assert set(resultado["ranking_por_region"]) == set(ventas_por_region())
+    for ranking in resultado["ranking_por_region"].values():
+        assert 1 <= len(ranking) <= 2
+        assert all("vendedor" in fila for fila in ranking)
+        assert [fila["total_vendido"] for fila in ranking] == sorted(
+            (fila["total_vendido"] for fila in ranking), reverse=True
+        )
+
+
+def test_ranking_vendedores_por_region_permite_unidades_y_valida_parametros():
+    por_unidades = ranking_vendedores_por_region(top_n=1, metrica="cantidad")
+    for ranking in por_unidades["ranking_por_region"].values():
+        assert len(ranking) == 1
+    assert "error" in ranking_vendedores_por_region(top_n=0)
+    assert "error" in ranking_vendedores_por_region(metrica="margen")
+
+
+def test_ranking_productos_por_region_estructura_y_orden():
+    resultado = ranking_productos_por_region(top_n=3)
+    assert resultado["metrica"] == "cantidad"
+    assert resultado["top_n"] == 3
+    assert set(resultado["ranking_por_region"]) == set(ventas_por_region())
+    for ranking in resultado["ranking_por_region"].values():
+        assert 1 <= len(ranking) <= 3
+        assert all("producto" in fila for fila in ranking)
+        assert [fila["unidades_vendidas"] for fila in ranking] == sorted(
+            (fila["unidades_vendidas"] for fila in ranking), reverse=True
+        )
+
+
+def test_ranking_productos_por_region_permite_facturacion_y_valida_parametros():
+    por_facturacion = ranking_productos_por_region(top_n=1, metrica="total")
+    for ranking in por_facturacion["ranking_por_region"].values():
+        assert len(ranking) == 1
+    assert "error" in ranking_productos_por_region(top_n=False)
+    assert "error" in ranking_productos_por_region(metrica="margen")
 
 
 # ── lista_productos ───────────────────────────────────────────────────────────

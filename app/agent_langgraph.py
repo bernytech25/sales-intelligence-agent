@@ -21,6 +21,8 @@ from app.tools import (
     ventas_vendedor_por_mes,
     vendedor_ranking_periodo,
     ventas_producto_por_region,
+    ranking_vendedores_por_region,
+    ranking_productos_por_region,
     lista_productos,
     producto_mas_vendido,
     resumen_general,
@@ -76,6 +78,20 @@ def tool_ventas_por_producto(producto: str) -> str:
     return json.dumps(ventas_producto_por_region(producto), ensure_ascii=False)
 
 @tool
+def tool_ranking_vendedores_por_region(top_n: int = 5, metrica: str = "total") -> str:
+    """Obtiene los vendedores con mejor desempeño dentro de cada región en una sola consulta.
+    Usar cuando pregunten quiénes son los vendedores que más o menos vendieron por región.
+    metrica='total' ordena por facturación y metrica='cantidad' por unidades."""
+    return json.dumps(ranking_vendedores_por_region(top_n, metrica), ensure_ascii=False)
+
+@tool
+def tool_ranking_productos_por_region(top_n: int = 5, metrica: str = "cantidad") -> str:
+    """Obtiene los productos más vendidos dentro de cada región en una sola consulta.
+    Usar cuando pregunten cuáles productos lideran por región.
+    metrica='cantidad' ordena por unidades y metrica='total' por facturación."""
+    return json.dumps(ranking_productos_por_region(top_n, metrica), ensure_ascii=False)
+
+@tool
 def tool_lista_productos() -> str:
     """Lista todos los productos que vende la tienda con nombre, categoría y unidades vendidas. Usar cuando pregunten qué productos vende la tienda o cuántos productos distintos hay."""
     return json.dumps(lista_productos(), ensure_ascii=False)
@@ -98,6 +114,8 @@ TOOLS = [
     tool_ventas_vendedor_por_mes,
     tool_vendedor_ranking_periodo,
     tool_ventas_por_producto,
+    tool_ranking_vendedores_por_region,
+    tool_ranking_productos_por_region,
     tool_lista_productos,
     tool_producto_mas_vendido,
     tool_resumen_general,
