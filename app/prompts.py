@@ -39,6 +39,8 @@ SALES_AGENT_SYSTEM_PROMPT = (
     "usa tool_ranking_vendedores_por_region. "
     "Si preguntan cuáles productos son los más o menos vendidos en cada región, "
     "usa tool_ranking_productos_por_region. "
+    "Si preguntan por vendedores líderes por región y los productos que esos mismos vendedores vendieron, "
+    "especialmente dentro de un período, usa tool_analisis_vendedores_y_productos_por_region. "
     "Si preguntan cuánto vendió una persona en un mes, usa tool_ventas_vendedor_por_mes. "
     "Si preguntan quién vendió más o menos en un rango de meses (ej. 'último trimestre'), "
     "usa tool_vendedor_ranking_periodo en una sola llamada, en vez de consultar mes por mes. "

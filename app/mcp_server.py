@@ -1,7 +1,7 @@
 """
 Servidor MCP (Model Context Protocol) para el Sales Intelligence Agent.
 
-Expone las mismas 12 funciones de análisis de app/tools.py como "tools" MCP,
+Expone las mismas 13 funciones de análisis de app/tools.py como "tools" MCP,
 de forma que cualquier cliente MCP (Claude Desktop, Claude.ai, Cursor, otro
 agente) pueda consultarlas directamente, sin pasar por LangGraph.
 
@@ -42,6 +42,7 @@ from app.tools import (
     ventas_producto_por_region,
     ranking_vendedores_por_region,
     ranking_productos_por_region,
+    analisis_vendedores_y_productos_por_region,
     lista_productos,
     producto_mas_vendido,
     resumen_general,
@@ -127,19 +128,40 @@ def tool_ventas_por_producto(producto: str) -> str:
     return json.dumps(ventas_producto_por_region(producto), ensure_ascii=False)
 
 @mcp.tool()
-def tool_ranking_vendedores_por_region(top_n: int = 5, metrica: str = "total") -> str:
+def tool_ranking_vendedores_por_region(top_n: int = 5, metrica: str = "total", mes_desde: str | None = None, mes_hasta: str | None = None) -> str:
     """Obtiene los vendedores con mejor desempeño dentro de cada región en una sola consulta.
     Usar cuando pregunten quiénes son los vendedores que más o menos vendieron por región.
     metrica='total' ordena por facturación y metrica='cantidad' por unidades."""
-    return json.dumps(ranking_vendedores_por_region(top_n, metrica), ensure_ascii=False)
+    return json.dumps(ranking_vendedores_por_region(top_n, metrica, mes_desde, mes_hasta), ensure_ascii=False)
 
 
 @mcp.tool()
-def tool_ranking_productos_por_region(top_n: int = 5, metrica: str = "cantidad") -> str:
+def tool_ranking_productos_por_region(top_n: int = 5, metrica: str = "cantidad", mes_desde: str | None = None, mes_hasta: str | None = None) -> str:
     """Obtiene los productos más vendidos dentro de cada región en una sola consulta.
     Usar cuando pregunten cuáles productos lideran por región.
     metrica='cantidad' ordena por unidades y metrica='total' por facturación."""
-    return json.dumps(ranking_productos_por_region(top_n, metrica), ensure_ascii=False)
+    return json.dumps(ranking_productos_por_region(top_n, metrica, mes_desde, mes_hasta), ensure_ascii=False)
+
+
+@mcp.tool()
+def tool_analisis_vendedores_y_productos_por_region(
+    mes_desde: str,
+    mes_hasta: str,
+    top_vendedores: int = 1,
+    top_productos: int = 3,
+    metrica_vendedor: str = "total",
+    metrica_producto: str = "cantidad",
+) -> str:
+    """Relaciona los vendedores líderes de cada región con los productos que ellos mismos vendieron más.
+    Usar para preguntas como: 'en septiembre, quién vendió más por región y qué artículos vendió'.
+    mes_desde y mes_hasta usan YYYY-MM e incluyen ambos meses."""
+    return json.dumps(
+        analisis_vendedores_y_productos_por_region(
+            mes_desde, mes_hasta, top_vendedores, top_productos,
+            metrica_vendedor, metrica_producto,
+        ),
+        ensure_ascii=False,
+    )
 
 
 @mcp.tool()

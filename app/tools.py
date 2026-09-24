@@ -4,6 +4,7 @@ Cada función es independiente y retorna un dict listo para serializar.
 """
 
 from functools import lru_cache
+import re
 
 import pandas as pd
 from pathlib import Path
@@ -29,6 +30,33 @@ def _con_mes(df: pd.DataFrame) -> pd.DataFrame:
     df["fecha"] = pd.to_datetime(df["fecha"])
     df["mes"] = df["fecha"].dt.strftime("%Y-%m")
     return df
+
+
+def _filtrar_por_periodo(
+    df: pd.DataFrame, mes_desde: str | None, mes_hasta: str | None
+) -> tuple[pd.DataFrame | None, str | None, str | None]:
+    """Filtra un DataFrame por un rango mensual inclusivo y valida su contrato.
+
+    Devuelve ``(datos, periodo, error)`` para que las tools públicas mantengan
+    el patrón existente de devolver un dict con ``error`` en vez de lanzar una
+    excepción ante parámetros de consulta inválidos.
+    """
+    if mes_desde is None and mes_hasta is None:
+        return df, "todo el período", None
+    if not mes_desde or not mes_hasta:
+        return None, None, "mes_desde y mes_hasta deben enviarse juntos en formato YYYY-MM."
+
+    patron_mes = r"^\d{4}-(0[1-9]|1[0-2])$"
+    if not re.fullmatch(patron_mes, mes_desde) or not re.fullmatch(patron_mes, mes_hasta):
+        return None, None, "mes_desde y mes_hasta deben tener formato YYYY-MM."
+    if mes_desde > mes_hasta:
+        return None, None, "mes_desde no puede ser posterior a mes_hasta."
+
+    df = _con_mes(df)
+    filtro = df[(df["mes"] >= mes_desde) & (df["mes"] <= mes_hasta)]
+    if filtro.empty:
+        return None, None, f"No hay datos entre '{mes_desde}' y '{mes_hasta}'."
+    return filtro, f"{mes_desde} a {mes_hasta}", None
 
 
 def ventas_por_vendedor() -> dict:
@@ -108,7 +136,14 @@ def ventas_producto_por_region(producto: str) -> dict:
     }
 
 
-def _ranking_por_region(entidad: str, campo: str, top_n: int, metrica: str) -> dict:
+def _ranking_por_region(
+    entidad: str,
+    campo: str,
+    top_n: int,
+    metrica: str,
+    mes_desde: str | None = None,
+    mes_hasta: str | None = None,
+) -> dict:
     """Construye un ranking compacto por región para una entidad de ventas.
 
     Es un helper privado compartido por las tools de vendedores y productos:
@@ -120,7 +155,9 @@ def _ranking_por_region(entidad: str, campo: str, top_n: int, metrica: str) -> d
     if metrica not in {"total", "cantidad"}:
         return {"error": "metrica debe ser 'total' o 'cantidad'."}
 
-    df = _load_df()
+    df, periodo, error = _filtrar_por_periodo(_load_df(), mes_desde, mes_hasta)
+    if error:
+        return {"error": error}
     resumen = (
         df.groupby(["region", campo])
         .agg(total_vendido=("total", "sum"), unidades_vendidas=("cantidad", "sum"))
@@ -144,28 +181,118 @@ def _ranking_por_region(entidad: str, campo: str, top_n: int, metrica: str) -> d
         ]
 
     return {
+        "periodo": periodo,
         "metrica": metrica,
         "top_n": top_n,
         "ranking_por_region": ranking_por_region,
     }
 
 
-def ranking_vendedores_por_region(top_n: int = 5, metrica: str = "total") -> dict:
+def ranking_vendedores_por_region(
+    top_n: int = 5,
+    metrica: str = "total",
+    mes_desde: str | None = None,
+    mes_hasta: str | None = None,
+) -> dict:
     """Devuelve los vendedores con mejor desempeño en cada región.
 
     Por defecto los ordena por facturación (``metrica='total'``). Usar
     ``metrica='cantidad'`` para ordenarlos por unidades vendidas.
     """
-    return _ranking_por_region("vendedor", "vendedor", top_n, metrica)
+    return _ranking_por_region("vendedor", "vendedor", top_n, metrica, mes_desde, mes_hasta)
 
 
-def ranking_productos_por_region(top_n: int = 5, metrica: str = "cantidad") -> dict:
+def ranking_productos_por_region(
+    top_n: int = 5,
+    metrica: str = "cantidad",
+    mes_desde: str | None = None,
+    mes_hasta: str | None = None,
+) -> dict:
     """Devuelve los productos más vendidos en cada región.
 
     Por defecto los ordena por unidades (``metrica='cantidad'``). Usar
     ``metrica='total'`` para ordenarlos por facturación.
     """
-    return _ranking_por_region("producto", "producto", top_n, metrica)
+    return _ranking_por_region("producto", "producto", top_n, metrica, mes_desde, mes_hasta)
+
+
+def analisis_vendedores_y_productos_por_region(
+    mes_desde: str,
+    mes_hasta: str,
+    top_vendedores: int = 1,
+    top_productos: int = 3,
+    metrica_vendedor: str = "total",
+    metrica_producto: str = "cantidad",
+) -> dict:
+    """Relaciona vendedores líderes y sus productos líderes por región y período.
+
+    Es una herramienta de reporte jerárquico para preguntas que requieren el
+    cruce exacto región → vendedor → producto, sin pedirle al LLM que una
+    resultados de múltiples consultas independientes.
+    """
+    if not isinstance(top_vendedores, int) or isinstance(top_vendedores, bool) or top_vendedores < 1:
+        return {"error": "top_vendedores debe ser un entero mayor o igual a 1."}
+    if not isinstance(top_productos, int) or isinstance(top_productos, bool) or top_productos < 1:
+        return {"error": "top_productos debe ser un entero mayor o igual a 1."}
+    if metrica_vendedor not in {"total", "cantidad"}:
+        return {"error": "metrica_vendedor debe ser 'total' o 'cantidad'."}
+    if metrica_producto not in {"total", "cantidad"}:
+        return {"error": "metrica_producto debe ser 'total' o 'cantidad'."}
+
+    df, periodo, error = _filtrar_por_periodo(_load_df(), mes_desde, mes_hasta)
+    if error:
+        return {"error": error}
+
+    vendedores = (
+        df.groupby(["region", "vendedor"])
+        .agg(total_vendido=("total", "sum"), unidades_vendidas=("cantidad", "sum"))
+        .reset_index()
+    )
+    regiones = df.groupby("region")["total"].sum().sort_values(ascending=False).index
+    columna_vendedor = "total_vendido" if metrica_vendedor == "total" else "unidades_vendidas"
+    columna_producto = "total_vendido" if metrica_producto == "total" else "unidades_vendidas"
+    analisis_por_region = {}
+
+    for region in regiones:
+        lideres = vendedores[vendedores["region"] == region].sort_values(
+            [columna_vendedor, "vendedor"], ascending=[False, True]
+        ).head(top_vendedores)
+        detalle_vendedores = []
+
+        for _, lider in lideres.iterrows():
+            ventas_vendedor = df[
+                (df["region"] == region) & (df["vendedor"] == lider["vendedor"])
+            ]
+            productos = (
+                ventas_vendedor.groupby("producto")
+                .agg(total_vendido=("total", "sum"), unidades_vendidas=("cantidad", "sum"))
+                .reset_index()
+                .sort_values([columna_producto, "producto"], ascending=[False, True])
+                .head(top_productos)
+            )
+            detalle_vendedores.append({
+                "vendedor": lider["vendedor"],
+                "total_vendido": float(lider["total_vendido"]),
+                "unidades_vendidas": int(lider["unidades_vendidas"]),
+                "productos_top": [
+                    {
+                        "producto": producto["producto"],
+                        "total_vendido": float(producto["total_vendido"]),
+                        "unidades_vendidas": int(producto["unidades_vendidas"]),
+                    }
+                    for _, producto in productos.iterrows()
+                ],
+            })
+        analisis_por_region[region] = detalle_vendedores
+
+    return {
+        "periodo": periodo,
+        "top_vendedores": top_vendedores,
+        "top_productos": top_productos,
+        "metrica_vendedor": metrica_vendedor,
+        "metrica_producto": metrica_producto,
+        "analisis_por_region": analisis_por_region,
+    }
 
 
 def lista_productos() -> dict:

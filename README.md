@@ -37,7 +37,7 @@ flowchart TB
         mcp[MCP server<br/>Bearer-token protected]
     end
 
-    agent --> tools[12 deterministic<br/>sales tools]
+    agent --> tools[13 deterministic<br/>sales tools]
     mcp --> tools
     tools --> data[(ventas.csv)]
 
@@ -53,7 +53,7 @@ flowchart TB
 
 ### Design principles
 
-- **The LLM interprets; tools calculate.** Sales metrics come from 12 deterministic Pandas functions, not model guesses.
+- **The LLM interprets; tools calculate.** Sales metrics come from 13 deterministic Pandas functions, not model guesses.
 - **REST owns reasoning and durable memory.** FastAPI combines LangGraph, JWT identity, and Firestore-backed conversation history.
 - **MCP stays stateless.** It exposes the same tools for an MCP client whose own model handles the reasoning loop.
 - **Memory is isolated by identity.** Firestore stores messages under `users/{user_id}/conversations/{conversation_id}`; `user_id` is derived from the validated JWT.
@@ -81,7 +81,7 @@ Both services use the same `app/tools.py` module, avoiding duplicate business lo
 | Infrastructure | Docker, Cloud Run, Artifact Registry, Secret Manager |
 | Delivery | GitHub Actions, Workload Identity Federation, immutable images, smoke tests |
 | Observability | LangSmith tracing |
-| Tests | Pytest — 62 automated tests |
+| Tests | Pytest — 67 automated tests |
 
 ## API
 
