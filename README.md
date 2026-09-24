@@ -9,7 +9,7 @@
 [![Google Cloud](https://img.shields.io/badge/Google_Cloud-Run_&_Artifact_Registry-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-purple?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm_Noncommercial-orange.svg)](https://polyformproject.org/licenses/noncommercial/1.0.0)
 
 **A production-oriented sales analysis agent: trusted calculations, conversational reasoning, and durable business context.**
 
@@ -207,4 +207,4 @@ The current API authentication is suitable for personal testing only and still i
 
 ---
 
-**Author:** Bernardo Mantilla · **License:** MIT
+**Author:** Bernardo Mantilla · **License:** [PolyForm Noncommercial 1.0.0](LICENSE)
