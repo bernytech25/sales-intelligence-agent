@@ -18,3 +18,6 @@ build/
 dist/
 *.egg-info/
 .DS_Store
+
+# Personal working notes (kept local only)
+notes/
